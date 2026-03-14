@@ -52,6 +52,7 @@ App default URL: `http://localhost:3000`
 2. You are signed in automatically and redirected to onboarding (`/onboarding`).
 3. Use the sidebar to navigate:
    - `Onboarding` for first-run setup checklist
+   - `Billing` for plan limits, entitlements, and billing readiness
    - `Command Center` for live KPIs and queue
    - `Transactions` for scored payment review
    - `Cases` for fraud investigations and case status actions

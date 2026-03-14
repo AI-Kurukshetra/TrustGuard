@@ -121,3 +121,4 @@
 - Added `createUsageThresholdNotification` in `lib/billing.ts` to emit one alert per period threshold (85% warning, 100% exceeded) for metered quota events.
 - Wired automated quota notification creation into `POST /api/transactions/analyze` for both transaction and API metering checks.
 - Extended `GET /api/billing/usage` responses with period quota notification records and surfaced recent billing quota alerts in `/scorecard`.
+- Added `app/(dashboard)/billing/page.tsx` and sidebar navigation entry for a dedicated billing view with plan usage, entitlement status, upgrade CTA, and invoice-history placeholder.

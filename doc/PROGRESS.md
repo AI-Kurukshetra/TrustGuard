@@ -54,3 +54,4 @@
 [2026-03-14 16:06] codex — Simplified main dashboard UX by adding priority focus cards, collapsing secondary metrics, replacing static workload text with live counts, and limiting queues to top 5 items with clear view-all actions.
 [2026-03-14 16:40] codex — Implemented monetization controls: billing usage events + quota overrides migration, plan entitlement library, transaction/API quota checks, advanced-feature plan gating, billing APIs, and dashboard scorecard page.
 [2026-03-14 16:45] codex — Added automated quota-threshold notifications (85%/100%) via `billing_usage_notifications`, wired alert creation into transaction scoring, exposed notification records in `/api/billing/usage`, and surfaced quota notices on `/scorecard`.
+[2026-03-14 16:52] codex — Added dedicated `/billing` workspace page and sidebar link with plan details, entitlement visibility, upgrade CTA, and invoice-history placeholder for upcoming provider integration.
