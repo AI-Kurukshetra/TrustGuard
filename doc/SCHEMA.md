@@ -499,6 +499,28 @@ Indexes:
 - unique index on `merchant_id, user_id`
 - index on `user_id`
 
+### entity_lists
+
+Whitelist and blacklist records for trusted/blocked entities at tenant scope.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | primary key |
+| `merchant_id` | `uuid` | fk -> `merchants.id`, not null |
+| `list_type` | `text` | `whitelist` or `blacklist` |
+| `entity_type` | `risk_entity_type` | user, device, transaction, etc. |
+| `entity_value` | `text` | id/hash/value to match |
+| `reason` | `text` | nullable |
+| `active` | `boolean` | default `true` |
+| `created_by` | `uuid` | nullable, `auth.users` |
+| `created_at` | `timestamptz` | default `now()` |
+| `updated_at` | `timestamptz` | default `now()` |
+
+Indexes:
+
+- unique index on `merchant_id, list_type, entity_type, entity_value`
+- index on `merchant_id, list_type, entity_type, entity_value`
+
 ### identity_verifications
 
 | Column | Type | Notes |
