@@ -1,5 +1,14 @@
 # API Contracts
 
+## In-Product API Docs
+
+Operators can now access API documentation directly inside the dashboard at:
+
+- `/api-docs`
+
+The in-product page is driven by `lib/api-reference.ts`, and coverage is verified by
+`tests/api-reference-coverage.test.ts` so newly added API routes are checked against documented method/path pairs.
+
 ## Tenant Context
 
 Protected API routes require:
@@ -22,6 +31,48 @@ Role enforcement:
 - `viewer`: read endpoints
 - `analyst`: investigation and operational write endpoints
 - `admin`: policy/config endpoints
+
+## JavaScript Agent Wrapper
+
+For backend integrations that want less boilerplate, use:
+
+- `lib/integrations/trustguard-js-agent.ts`
+
+Example:
+
+```ts
+import { TrustGuardJsAgent } from "@/lib/integrations/trustguard-js-agent";
+
+const trustguard = new TrustGuardJsAgent({
+  baseUrl: process.env.TRUSTGUARD_BASE_URL!,
+  apiKey: process.env.TRUSTGUARD_API_KEY!,
+  merchantId: process.env.TRUSTGUARD_MERCHANT_ID!,
+  timeoutMs: 5000,
+  retries: 2
+});
+
+const { analysis } = await trustguard.scorePayment({
+  device: {
+    user_id: "external-123",
+    browser: "Chrome",
+    os: "Windows"
+  },
+  transaction: {
+    amount: 249.99,
+    currency: "USD",
+    user_id: "external-123",
+    country_code: "US"
+  }
+});
+```
+
+Provided helpers:
+
+- `analyzeTransaction(...)`
+- `registerDevice(...)`
+- `scorePayment(...)` (register device + analyze in one call)
+- `updateSessionBehavior(...)`
+- `getAlerts()`
 
 ## Endpoints
 
@@ -57,10 +108,13 @@ Behavior:
 
 - derives velocity windows (`1h`, `24h`) from historical transactions
 - enriches geo mismatch and impossible travel signals when session coordinates are available
+- derives failed-login and behavioral anomaly signals from `sessions` and `behavioral_patterns` when available
+- derives latest user identity-verification status from `identity_verifications` when available
+- applies model deployment assignment (`active`/`challenger`) from `model_deployments` when configured
 - evaluates active `risk_rules`
 - persists `transactions`, `risk_scores`, `rule_executions`
 - auto-creates `alerts` and `fraud_cases` for `review` and `block`
-- dispatches configured webhooks and records `webhook_deliveries`
+- dispatches configured webhook/email/slack-style endpoints and records `webhook_deliveries` with retry attempts
 
 ### POST `/api/devices/register`
 
@@ -83,9 +137,28 @@ Response:
 {
   "user_id": "10000000-0000-0000-0000-000000000001",
   "device_hash": "fp_a8bz90",
-  "registered": true
+  "registered": true,
+  "trust_score": 82,
+  "trust_risk_score": 18,
+  "trust_signals": {
+    "isKnownDevice": true,
+    "linkedToDifferentUser": false,
+    "hasHardwareSignature": true,
+    "hasIpAddress": true,
+    "accountDeviceCount": 2,
+    "approvedTransactionCount90d": 10,
+    "failedLoginEvents24h": 0,
+    "daysSinceFirstSeen": 45,
+    "daysSinceLastSeen": 1
+  }
 }
 ```
+
+Behavior:
+
+- computes a trust profile using novelty, stability, failed-login pressure, and recency decay signals
+- persists `devices.trust_score` and embeds trust profile metadata for explainability
+- upserts by `(merchant_id, device_hash)` to keep device history stable across re-registration
 
 ### GET `/api/alerts`
 
@@ -163,6 +236,20 @@ Headers:
 
 Supports basic model registry operations for tenant-level model metadata.
 
+### GET/POST `/api/models/deployments`
+
+Headers:
+
+- `x-merchant-id: <merchant_uuid>`
+
+Supports model deployment configuration per `deployment_target`:
+
+- `active_model_id` (required)
+- optional `challenger_model_id`
+- optional `challenger_traffic_percent` (0-100)
+
+`POST` upserts one deployment row per target and is used by scoring to assign `active` vs `challenger` model variants.
+
 ### GET/POST `/api/identity-verifications`
 
 Headers:
@@ -170,6 +257,23 @@ Headers:
 - `x-merchant-id: <merchant_uuid>`
 
 Supports ingest and retrieval of identity verification records.
+
+### PATCH `/api/identity-verifications/{id}`
+
+Headers:
+
+- `x-merchant-id: <merchant_uuid>`
+
+Updates identity verification state (`pending`, `verified`, `failed`, `expired`) and refreshes verification evidence fields (`score`, `provider`, `result_payload`).
+
+### POST `/api/identity-verifications/callback`
+
+Headers:
+
+- `x-api-key: <integration_api_key>` or bearer/cookie auth
+- `x-merchant-id: <merchant_uuid>`
+
+Provider callback endpoint for asynchronous identity updates. Accepts either `verification_id` or `reference_id` plus status payload.
 
 ### PATCH `/api/sessions/{id}/behavior`
 
@@ -231,7 +335,24 @@ Headers:
 
 - `x-merchant-id: <merchant_uuid>`
 
-Validates payment method payloads using current adapter heuristics and updates `payment_methods.validation_status` when `payment_method_id` is provided.
+Validates payment method payloads using method-specific adapters (`card_v1`, `bank_v1`, `wallet_v1`, `generic_v1`) and updates `payment_methods.validation_status` when `payment_method_id` is provided.
+
+Response shape:
+
+```json
+{
+  "validated": true,
+  "source": "rules_adapter_v2",
+  "score": 84,
+  "reasons": ["luhn_passed"],
+  "adapter": "card_v1"
+}
+```
+
+Behavior:
+
+- returns a scored validation decision with explicit reasons
+- stores validation details in `payment_methods.metadata.validation` for auditability
 
 ### POST `/api/users/risk-profile/refresh`
 

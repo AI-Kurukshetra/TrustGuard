@@ -46,6 +46,12 @@ export default async function OnboardingPage() {
               Call <code>POST /api/transactions/analyze</code> from your backend using <code>x-api-key</code> and{" "}
               <code>x-merchant-id</code>.
             </p>
+            <Link
+              href="/api-docs"
+              className="mt-3 inline-flex rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-200"
+            >
+              Open API docs
+            </Link>
             <pre className="mt-3 overflow-x-auto rounded-xl border border-white/10 bg-slate-950/70 p-3 text-xs text-slate-200">
 {`curl -X POST "$BASE_URL/api/transactions/analyze" \\
   -H "x-api-key: tg_live_replace_me" \\

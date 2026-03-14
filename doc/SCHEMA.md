@@ -602,6 +602,28 @@ Indexes:
 
 - index on `model_id, evaluated_at desc`
 
+### model_deployments
+
+Deployment control plane for selecting active/challenger models per merchant and target (`transaction`, `user`, etc.).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | primary key |
+| `merchant_id` | `uuid` | fk -> `merchants.id`, not null |
+| `deployment_target` | `text` | scoped target key (for example `transaction`) |
+| `active_model_id` | `uuid` | fk -> `ml_models.id`, not null |
+| `challenger_model_id` | `uuid` | fk -> `ml_models.id`, nullable |
+| `challenger_traffic_percent` | `integer` | 0-100 |
+| `started_at` | `timestamptz` | deployment start timestamp |
+| `created_at` | `timestamptz` | default `now()` |
+| `updated_at` | `timestamptz` | default `now()` |
+
+Indexes:
+
+- unique index on `merchant_id, deployment_target`
+- index on `active_model_id`
+- index on `challenger_model_id`
+
 ### compliance_reports
 
 | Column | Type | Notes |
@@ -749,6 +771,7 @@ Merchant-scoped API keys for backend-to-backend ingestion (transactions, device 
 - `merchants` 1 -> many `fraud_cases`
 - `merchants` 1 -> many `api_request_metrics`
 - `merchants` 1 -> many `integration_api_keys`
+- `merchants` 1 -> many `model_deployments`
 - `users` 1 -> many `devices`
 - `users` 1 -> many `sessions`
 - `users` 1 -> many `payment_methods`
@@ -756,6 +779,7 @@ Merchant-scoped API keys for backend-to-backend ingestion (transactions, device 
 - `transactions` 1 -> many `risk_scores`
 - `transactions` 1 -> many `rule_executions`
 - `transactions` 1 -> 0..1 `chargebacks`
+- `ml_models` 1 -> many `model_deployments` (as active/challenger assignments)
 - `fraud_cases` 1 -> many `fraud_case_events`
 - `alerts` may create or link to `fraud_cases`
 - `auth.users` 1 -> many `merchant_members`
@@ -771,6 +795,7 @@ Merchant-scoped API keys for backend-to-backend ingestion (transactions, device 
 - check `risk_threshold_review between 0 and 100`
 - check `risk_threshold_block between 0 and 100`
 - check `risk_threshold_block >= risk_threshold_review`
+- check `challenger_traffic_percent between 0 and 100`
 
 ## Recommended RLS Strategy
 
@@ -791,6 +816,7 @@ Supabase row-level security should be enabled for all business tables.
 ### Admin Access
 
 - admins can manage `risk_rules`, `webhook_endpoints`, `compliance_reports`, and merchant settings
+- admins can manage `model_deployments` to control active/challenger model assignments
 
 ### Restricted Data
 

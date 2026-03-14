@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ApiKeyManager } from "@/components/integrations/api-key-manager";
 import { PageShell } from "@/components/page-shell";
 import { SectionCard } from "@/components/section-card";
@@ -26,6 +27,17 @@ export default async function IntegrationsPage() {
           <p>
             Required request context: `x-api-key` and `x-merchant-id`. The API returns risk score and decision so you
             can allow, review, or block in real time.
+          </p>
+          <p>
+            You can also use the built-in JS agent wrapper (`lib/integrations/trustguard-js-agent.ts`) to simplify
+            request auth headers, retries, and timeout management.
+          </p>
+          <p>
+            Need full endpoint contracts? Open{" "}
+            <Link href="/api-docs" className="text-pulse underline">
+              API documentation
+            </Link>{" "}
+            for role requirements, auth modes, and payload examples.
           </p>
         </div>
       </SectionCard>

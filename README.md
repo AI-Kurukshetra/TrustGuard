@@ -86,7 +86,10 @@ corepack pnpm exec vercel --version
 - `GET/POST /api/compliance/reports`
 - `GET/POST /api/entity-lists`
 - `GET/POST /api/models`
+- `GET/POST /api/models/deployments`
 - `GET/POST /api/identity-verifications`
+- `PATCH /api/identity-verifications/:id`
+- `POST /api/identity-verifications/callback`
 - `GET/POST /api/fraud-patterns`
 - `GET/POST /api/geographical-locations`
 - `GET/POST /api/behavioral-patterns`
@@ -151,6 +154,7 @@ Supabase migrations are in:
 - `supabase/migrations/20260314133000_add_api_request_metrics.sql`
 - `supabase/migrations/20260314143000_seed_remaining_tables.sql`
 - `supabase/migrations/20260314151000_add_integration_api_keys.sql`
+- `supabase/migrations/20260314155100_add_model_deployments.sql`
 
 Canonical schema reference: `doc/SCHEMA.md`
 

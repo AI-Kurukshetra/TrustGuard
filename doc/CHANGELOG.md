@@ -61,3 +61,30 @@
 - Updated signup flow to redirect newly created users to onboarding instead of landing directly on the dashboard.
 - Added sidebar entry for onboarding so operators can revisit setup guidance later.
 - Added a full feature status audit in `doc/ROADMAP.md` covering all 20 core and 12 advanced features, with updated completion labels (`Complete (MVP)`, `Partial`, `Not Started`) and a new phased roadmap (`R1`-`R5`) for unfinished scope.
+- Strengthened `analyzeTransaction` by deriving failed-login and behavioral anomaly risk signals from live `sessions` and `behavioral_patterns` data before scoring.
+- Added new heuristic explanations for compounded ATO indicators (`ato_compound_signal`, `credential_stuffing_pattern`), behavioral anomalies, and low-trust devices.
+- Extended runtime rule context and persisted `risk_scores.feature_snapshot` with `behavioral_anomaly_score` for explainability and downstream policy use.
+- Updated `tests/trustguard-data.test.ts` to cover the new risk-factor scoring paths.
+- Upgraded `/api/devices/register` trust computation by adding a scored device trust profile (novelty, stability, failed-login pressure, and recency decay).
+- Updated `registerDevice` to upsert by `(merchant_id, device_hash)`, persist `devices.trust_score`, and record trust profile metadata under `devices.metadata.trust_profile`.
+- Expanded device-registration responses with `trust_score`, `trust_risk_score`, and `trust_signals` so callers can reason about device confidence immediately.
+- Added unit-test coverage for stable/high-trust and risky/low-trust device trust profile scenarios.
+- Added `lib/integrations/trustguard-js-agent.ts`, a typed JavaScript integration wrapper with built-in `x-api-key`/`x-merchant-id` headers, retry/backoff, timeout handling, and endpoint helpers (`analyzeTransaction`, `registerDevice`, `scorePayment`, `updateSessionBehavior`, `getAlerts`).
+- Updated integration UX/docs to include JS-agent quick-start snippets in `components/integrations/api-key-manager.tsx`, `app/(dashboard)/integrations/page.tsx`, `README.md`, and `doc/API.md`.
+- Added `lib/payment-validation.ts` with method-specific validation adapters and scoring logic (including Luhn checks for cards).
+- Refactored `POST /api/payment-methods/validate` to use adapter-based validation and persist evidence in `payment_methods.metadata.validation`.
+- Added `tests/payment-validation.test.ts` covering positive/negative card validation, bank validation failure paths, and Luhn helper behavior.
+- Added in-product API documentation page at `/api-docs` with quickstart auth guidance, grouped endpoint reference, and request/response examples.
+- Added `lib/api-reference.ts` as a single source of truth for documented endpoint method/path contracts, role requirements, and auth modes.
+- Added `tests/api-reference-coverage.test.ts` to compare live `app/api/**/route.ts` methods against docs reference and catch missing/stale entries as APIs evolve.
+- Updated dashboard navigation and setup surfaces (`sidebar`, `onboarding`, `integrations`) to link users directly to in-product API docs.
+- Extended API docs coverage to include identity verification update/callback endpoints (`PATCH /api/identity-verifications/{id}`, `POST /api/identity-verifications/callback`) discovered during route parity checks.
+- Fixed `tests/trustguard-data.test.ts` typecheck input fixture by adding required `identityVerified` boolean to heuristic scoring test payload.
+- Expanded alert delivery handling in transaction scoring to infer endpoint channel type (`webhook`, `email`, `slack`) from endpoint URLs and retry failed deliveries up to three attempts before final `failed` state.
+- Added identity workflow endpoints: `PATCH /api/identity-verifications/{id}` for analyst updates and `POST /api/identity-verifications/callback` for provider callbacks.
+- Wired latest identity verification status into transaction scoring/rule context (`identity_verified`) and persisted feature snapshots so unverified identities raise live risk.
+- Added migration `20260314155100_add_model_deployments.sql` introducing `model_deployments` (active/challenger model assignments with traffic split and RLS policies).
+- Added `GET/POST /api/models/deployments` for admin-managed model deployment control by `deployment_target`.
+- Updated transaction scoring to load deployment config, deterministically route transactions to active vs challenger variants, and persist assigned `model_id` + assignment metadata in `risk_scores.feature_snapshot`.
+- Updated API reference/docs (`lib/api-reference.ts`, `doc/API.md`, `README.md`, `doc/SCHEMA.md`) to include model deployment endpoints/table and new scoring metadata behavior.
+- Added a live execution tracking board to `doc/ROADMAP.md` with status rows for all 20 core and 12 advanced features plus a prioritized immediate execution queue.

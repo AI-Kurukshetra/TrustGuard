@@ -16,7 +16,8 @@ const links: SidebarLink[] = [
   { href: "/cases", label: "Cases", meta: "Analyst workflow" },
   { href: "/rules", label: "Rules", meta: "Policy controls" },
   { href: "/alerts", label: "Alerts", meta: "Incident stream" },
-  { href: "/integrations", label: "Integrations", meta: "API keys & setup" }
+  { href: "/integrations", label: "Integrations", meta: "API keys & setup" },
+  { href: "/api-docs", label: "API Docs", meta: "Integration reference" }
 ];
 
 export function Sidebar({ pathname, header }: { pathname: string; header?: ReactNode }) {

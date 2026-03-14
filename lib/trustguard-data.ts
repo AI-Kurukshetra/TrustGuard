@@ -74,8 +74,10 @@ interface AnalyzeTransactionInput {
   failed_login_count?: number;
   chargeback_history_count?: number;
   payment_method_validated?: boolean;
+  identity_verified?: boolean;
   user_in_whitelist?: boolean;
   device_trust_score?: number;
+  behavioral_anomaly_score?: number;
   merchant_id?: string;
   user_id?: string | null;
   session_id?: string | null;
@@ -111,6 +113,7 @@ interface RegisterDeviceInput {
   screen_resolution?: string;
   ip_address?: string;
   hardware_signature?: string;
+  network_type?: string;
   timezone?: string;
   language?: string;
 }
@@ -305,6 +308,95 @@ function haversineKm(fromLat: number, fromLng: number, toLat: number, toLng: num
   return 2 * earthRadiusKm * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function clampRiskScore(value: number) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.min(100, Math.max(0, Math.round(value)));
+}
+
+function parseRiskNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
+  }
+  return null;
+}
+
+function extractBehavioralBiometricsRisk(payload: unknown): number {
+  if (!payload || typeof payload !== "object") {
+    return 0;
+  }
+
+  const source = payload as Record<string, unknown>;
+  const keys = [
+    "anomaly_score",
+    "risk_score",
+    "behavioral_risk_score",
+    "typing_deviation",
+    "mouse_deviation",
+    "pointer_deviation",
+    "touch_deviation"
+  ];
+
+  let highestScore = 0;
+  for (const key of keys) {
+    const numericValue = parseRiskNumber(source[key]);
+    if (numericValue === null) {
+      continue;
+    }
+    const normalizedValue = numericValue <= 1 ? numericValue * 100 : numericValue;
+    highestScore = Math.max(highestScore, normalizedValue);
+  }
+
+  const anomalyDetected = source.anomaly_detected === true || source.behavior_mismatch === true;
+  if (anomalyDetected) {
+    highestScore = Math.max(highestScore, 75);
+  }
+
+  return clampRiskScore(highestScore);
+}
+
+function extractBehavioralPatternRisk(rows: Array<Record<string, unknown>>) {
+  let highestScore = 0;
+  for (const row of rows) {
+    const score = parseRiskNumber(row.score) ?? 0;
+    const payloadScore = extractBehavioralBiometricsRisk(row.pattern_payload);
+    const status = typeof row.status === "string" ? row.status.toLowerCase() : "";
+    let rowScore = Math.max(score, payloadScore);
+
+    if (["anomalous", "suspicious", "high_risk", "blocked", "review"].includes(status)) {
+      rowScore = Math.max(rowScore, 70);
+    }
+
+    highestScore = Math.max(highestScore, rowScore);
+  }
+
+  return clampRiskScore(highestScore);
+}
+
+function inferDeliveryChannel(targetUrl: string) {
+  const normalizedUrl = targetUrl.trim().toLowerCase();
+  if (normalizedUrl.startsWith("mailto:")) {
+    return "email";
+  }
+  if (normalizedUrl.includes("hooks.slack.com")) {
+    return "slack";
+  }
+  return "webhook";
+}
+
+function buildAlertDeliveryChannels(endpoints: Array<{ target_url: string }>) {
+  const channels = new Set<string>(["dashboard"]);
+  for (const endpoint of endpoints) {
+    channels.add(inferDeliveryChannel(endpoint.target_url));
+  }
+  return Array.from(channels);
+}
+
 function calculateHeuristicRisk(params: {
   amount: number;
   isNewDevice: boolean;
@@ -315,6 +407,9 @@ function calculateHeuristicRisk(params: {
   failedLoginCount: number;
   chargebackHistoryCount: number;
   paymentMethodValidated: boolean;
+  identityVerified: boolean;
+  deviceTrustScore: number;
+  behavioralAnomalyScore: number;
 }) {
   let score = 10;
   const explanation: string[] = [];
@@ -349,6 +444,29 @@ function calculateHeuristicRisk(params: {
     explanation.push("failed_login_burst");
   }
 
+  if (params.failedLoginCount >= 7) {
+    score += 8;
+    explanation.push("credential_stuffing_pattern");
+  }
+
+  if (params.isNewDevice && params.failedLoginCount >= 3) {
+    score += 12;
+    explanation.push("ato_compound_signal");
+  }
+
+  if (params.behavioralAnomalyScore >= 70) {
+    score += 24;
+    explanation.push("behavioral_anomaly_high");
+  } else if (params.behavioralAnomalyScore >= 40) {
+    score += 12;
+    explanation.push("behavioral_anomaly_medium");
+  }
+
+  if (params.deviceTrustScore > 0 && params.deviceTrustScore < 40) {
+    score += 15;
+    explanation.push("low_device_trust");
+  }
+
   if (params.chargebackHistoryCount >= 2) {
     score += 12;
     explanation.push("chargeback_history");
@@ -357,6 +475,11 @@ function calculateHeuristicRisk(params: {
   if (!params.paymentMethodValidated) {
     score += 10;
     explanation.push("payment_method_unvalidated");
+  }
+
+  if (!params.identityVerified) {
+    score += 14;
+    explanation.push("identity_unverified");
   }
 
   return {
@@ -1228,6 +1351,140 @@ function hashDeviceFingerprint(input: string) {
   return `fp_${Math.abs(hash).toString(36)}`;
 }
 
+function hashStringToPositiveInt(input: string) {
+  let hash = 0;
+  for (let index = 0; index < input.length; index += 1) {
+    hash = (hash << 5) - hash + input.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function selectDeployedModel(input: {
+  activeModelId: string;
+  challengerModelId: string | null;
+  challengerTrafficPercent: number;
+  seed: string;
+}) {
+  const normalizedTraffic = Math.max(0, Math.min(100, Math.round(input.challengerTrafficPercent)));
+  if (!input.challengerModelId || normalizedTraffic === 0) {
+    return {
+      modelId: input.activeModelId,
+      variant: "active" as const,
+      bucket: null as number | null
+    };
+  }
+
+  const bucket = hashStringToPositiveInt(input.seed) % 100;
+  if (bucket < normalizedTraffic) {
+    return {
+      modelId: input.challengerModelId,
+      variant: "challenger" as const,
+      bucket
+    };
+  }
+
+  return {
+    modelId: input.activeModelId,
+    variant: "active" as const,
+    bucket
+  };
+}
+
+type DeviceTrustSignals = {
+  isKnownDevice: boolean;
+  linkedToDifferentUser: boolean;
+  hasHardwareSignature: boolean;
+  hasIpAddress: boolean;
+  accountDeviceCount: number;
+  approvedTransactionCount90d: number;
+  failedLoginEvents24h: number;
+  daysSinceFirstSeen: number;
+  daysSinceLastSeen: number;
+};
+
+type DeviceTrustProfile = {
+  trustScore: number;
+  riskScore: number;
+  signals: DeviceTrustSignals;
+};
+
+function daysBetween(fromIso: string | null, toDate: Date) {
+  if (!fromIso) {
+    return 0;
+  }
+  const fromMs = new Date(fromIso).getTime();
+  if (!Number.isFinite(fromMs)) {
+    return 0;
+  }
+  return Math.max(0, Math.floor((toDate.getTime() - fromMs) / (1000 * 60 * 60 * 24)));
+}
+
+function buildDeviceTrustProfile(signals: DeviceTrustSignals): DeviceTrustProfile {
+  let riskScore = 40;
+
+  if (!signals.isKnownDevice) {
+    riskScore += 22;
+  } else {
+    riskScore -= 10;
+  }
+
+  if (signals.linkedToDifferentUser) {
+    riskScore += 35;
+  }
+
+  if (signals.hasHardwareSignature) {
+    riskScore -= 8;
+  } else {
+    riskScore += 10;
+  }
+
+  if (signals.hasIpAddress) {
+    riskScore -= 3;
+  } else {
+    riskScore += 5;
+  }
+
+  if (signals.accountDeviceCount <= 2) {
+    riskScore -= 6;
+  } else if (signals.accountDeviceCount >= 7) {
+    riskScore += 8;
+  }
+
+  if (signals.approvedTransactionCount90d >= 10) {
+    riskScore -= 15;
+  } else if (signals.approvedTransactionCount90d >= 3) {
+    riskScore -= 8;
+  }
+
+  if (signals.failedLoginEvents24h >= 6) {
+    riskScore += 20;
+  } else if (signals.failedLoginEvents24h >= 3) {
+    riskScore += 12;
+  } else if (signals.failedLoginEvents24h >= 1) {
+    riskScore += 6;
+  }
+
+  if (signals.daysSinceFirstSeen >= 30) {
+    riskScore -= 10;
+  } else if (signals.isKnownDevice && signals.daysSinceFirstSeen <= 1) {
+    riskScore += 6;
+  }
+
+  if (signals.daysSinceLastSeen > 90) {
+    riskScore += 10;
+  } else if (signals.daysSinceLastSeen <= 7 && signals.isKnownDevice) {
+    riskScore -= 4;
+  }
+
+  const normalizedRisk = clampRiskScore(riskScore);
+  return {
+    trustScore: 100 - normalizedRisk,
+    riskScore: normalizedRisk,
+    signals
+  };
+}
+
 export async function registerDevice(input: RegisterDeviceInput, client?: SupabaseClientLike) {
   const fingerprintSource = [
     input.browser,
@@ -1242,38 +1499,156 @@ export async function registerDevice(input: RegisterDeviceInput, client?: Supaba
   const deviceHash = hashDeviceFingerprint(fingerprintSource);
 
   if (!hasSupabaseEnv() || !input.merchant_id || !client) {
+    const fallbackTrust = buildDeviceTrustProfile({
+      isKnownDevice: false,
+      linkedToDifferentUser: false,
+      hasHardwareSignature: Boolean(input.hardware_signature),
+      hasIpAddress: Boolean(input.ip_address),
+      accountDeviceCount: 0,
+      approvedTransactionCount90d: 0,
+      failedLoginEvents24h: 0,
+      daysSinceFirstSeen: 0,
+      daysSinceLastSeen: 0
+    });
     return {
       user_id: input.user_id ?? null,
       device_hash: deviceHash,
-      registered: false
+      registered: false,
+      trust_score: fallbackTrust.trustScore,
+      trust_risk_score: fallbackTrust.riskScore,
+      trust_signals: fallbackTrust.signals
     };
   }
 
   try {
-    await client.from("devices").insert({
-      merchant_id: input.merchant_id,
-      user_id: input.user_id ?? null,
-      device_hash: deviceHash,
-      browser: input.browser ?? null,
-      os: input.os ?? null,
-      screen_resolution: input.screen_resolution ?? null,
-      ip_address: input.ip_address ?? null,
-      hardware_signature: input.hardware_signature ?? null,
-      timezone: input.timezone ?? null,
-      language: input.language ?? null,
-      last_seen_at: new Date().toISOString()
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const ninetyDaysAgoIso = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const twentyFourHoursAgoIso = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: existingDevice } = await client
+      .from("devices")
+      .select("id, user_id, first_seen_at, last_seen_at")
+      .eq("merchant_id", input.merchant_id)
+      .eq("device_hash", deviceHash)
+      .maybeSingle();
+
+    const deviceId = typeof existingDevice?.id === "string" ? existingDevice.id : null;
+    const accountDeviceCountPromise =
+      typeof input.user_id === "string" && input.user_id.length > 0
+        ? client
+            .from("devices")
+            .select("id", { count: "exact", head: true })
+            .eq("merchant_id", input.merchant_id)
+            .eq("user_id", input.user_id)
+        : Promise.resolve({ count: 0 });
+
+    const approvedTxPromise = deviceId
+      ? client
+          .from("transactions")
+          .select("id", { count: "exact", head: true })
+          .eq("merchant_id", input.merchant_id)
+          .eq("device_id", deviceId)
+          .eq("status", "approved")
+          .gte("occurred_at", ninetyDaysAgoIso)
+      : Promise.resolve({ count: 0 });
+
+    const failedSessionPromise = deviceId
+      ? client
+          .from("sessions")
+          .select("failed_login_count, login_success")
+          .eq("merchant_id", input.merchant_id)
+          .eq("device_id", deviceId)
+          .gte("started_at", twentyFourHoursAgoIso)
+      : Promise.resolve({ data: [] as Array<{ failed_login_count: number | null; login_success: boolean }> });
+
+    const [accountDeviceCountRes, approvedTxRes, failedSessionRes] = await Promise.all([
+      accountDeviceCountPromise,
+      approvedTxPromise,
+      failedSessionPromise
+    ]);
+
+    const failedLoginEvents24h = (failedSessionRes.data ?? []).reduce((sum, session) => {
+      const count = Number(session.failed_login_count ?? 0);
+      return sum + count + (session.login_success === false ? 1 : 0);
+    }, 0);
+
+    const trustProfile = buildDeviceTrustProfile({
+      isKnownDevice: Boolean(existingDevice),
+      linkedToDifferentUser:
+        Boolean(existingDevice?.user_id) &&
+        Boolean(input.user_id) &&
+        existingDevice?.user_id !== input.user_id,
+      hasHardwareSignature: Boolean(input.hardware_signature),
+      hasIpAddress: Boolean(input.ip_address),
+      accountDeviceCount: accountDeviceCountRes.count ?? 0,
+      approvedTransactionCount90d: approvedTxRes.count ?? 0,
+      failedLoginEvents24h,
+      daysSinceFirstSeen: daysBetween(existingDevice?.first_seen_at ?? null, now),
+      daysSinceLastSeen: daysBetween(existingDevice?.last_seen_at ?? null, now)
     });
 
+    const resolvedUserId =
+      existingDevice?.user_id && existingDevice.user_id !== ""
+        ? existingDevice.user_id
+        : input.user_id ?? null;
+    const metadata = {
+      trust_profile: {
+        calculated_at: nowIso,
+        risk_score: trustProfile.riskScore,
+        trust_score: trustProfile.trustScore,
+        signals: trustProfile.signals
+      }
+    };
+
+    await client.from("devices").upsert(
+      {
+        merchant_id: input.merchant_id,
+        user_id: resolvedUserId,
+        device_hash: deviceHash,
+        browser: input.browser ?? null,
+        os: input.os ?? null,
+        screen_resolution: input.screen_resolution ?? null,
+        ip_address: input.ip_address ?? null,
+        hardware_signature: input.hardware_signature ?? null,
+        network_type: input.network_type ?? null,
+        timezone: input.timezone ?? null,
+        language: input.language ?? null,
+        trust_score: trustProfile.trustScore,
+        metadata,
+        first_seen_at: existingDevice?.first_seen_at ?? nowIso,
+        last_seen_at: nowIso
+      },
+      { onConflict: "merchant_id,device_hash" }
+    );
+
     return {
-      user_id: input.user_id ?? null,
+      user_id: resolvedUserId,
       device_hash: deviceHash,
-      registered: true
+      registered: true,
+      trust_score: trustProfile.trustScore,
+      trust_risk_score: trustProfile.riskScore,
+      trust_signals: trustProfile.signals
     };
   } catch {
+    const fallbackTrust = buildDeviceTrustProfile({
+      isKnownDevice: false,
+      linkedToDifferentUser: false,
+      hasHardwareSignature: Boolean(input.hardware_signature),
+      hasIpAddress: Boolean(input.ip_address),
+      accountDeviceCount: 0,
+      approvedTransactionCount90d: 0,
+      failedLoginEvents24h: 0,
+      daysSinceFirstSeen: 0,
+      daysSinceLastSeen: 0
+    });
     return {
       user_id: input.user_id ?? null,
       device_hash: deviceHash,
-      registered: false
+      registered: false,
+      trust_score: fallbackTrust.trustScore,
+      trust_risk_score: fallbackTrust.riskScore,
+      trust_signals: fallbackTrust.signals
     };
   }
 }
@@ -1283,17 +1658,23 @@ export async function analyzeTransaction(
   client?: SupabaseClientLike
 ): Promise<AnalyzeTransactionResult> {
   const amount = Number(input.amount ?? 0);
-  const isNewDevice = Boolean(input.device_is_new);
+  let isNewDevice = Boolean(input.device_is_new);
   let velocityCount1h = Number(input.velocity_count ?? 0);
   let velocityCount24h = Number(input.velocity_24h_count ?? input.velocity_count ?? 0);
   let geoMismatch = Boolean(input.geo_mismatch);
   let travelSpeedKmh = Number(input.travel_speed_kmh ?? 0);
   let loginGapMinutes = Number(input.login_gap_minutes ?? 0);
-  const failedLoginCount = Number(input.failed_login_count ?? 0);
+  let failedLoginCount = Number(input.failed_login_count ?? 0);
   const chargebackHistoryCount = Number(input.chargeback_history_count ?? 0);
   const paymentMethodValidated = Boolean(input.payment_method_validated ?? false);
+  let identityVerified = Boolean(input.identity_verified ?? false);
   const userInWhitelist = Boolean(input.user_in_whitelist);
-  const deviceTrustScore = Number(input.device_trust_score ?? 0);
+  let deviceTrustScore = Number(input.device_trust_score ?? 0);
+  let behavioralAnomalyScore = Number(input.behavioral_anomaly_score ?? 0);
+  let selectedModelId: string | null = null;
+  let selectedModelVariant: "none" | "active" | "challenger" = "none";
+  let selectedModelBucket: number | null = null;
+  let challengerTrafficPercent = 0;
   const currentLatitude = input.latitude !== undefined ? Number(input.latitude) : null;
   const currentLongitude = input.longitude !== undefined ? Number(input.longitude) : null;
 
@@ -1306,7 +1687,10 @@ export async function analyzeTransaction(
     loginGapMinutes,
     failedLoginCount,
     chargebackHistoryCount,
-    paymentMethodValidated
+    paymentMethodValidated,
+    identityVerified,
+    deviceTrustScore,
+    behavioralAnomalyScore
   });
   const normalizedScore = baseRisk.normalizedScore;
   const heuristicDecision = normalizedScore >= 85 ? "block" : normalizedScore >= 60 ? "review" : "approve";
@@ -1323,8 +1707,12 @@ export async function analyzeTransaction(
     failed_login_count: failedLoginCount,
     chargeback_history_count: chargebackHistoryCount,
     payment_method_validated: paymentMethodValidated,
+    identity_verified: identityVerified,
     user_in_whitelist: userInWhitelist,
-    device_trust_score: deviceTrustScore
+    device_trust_score: deviceTrustScore,
+    behavioral_anomaly_score: behavioralAnomalyScore,
+    model_variant: selectedModelVariant,
+    challenger_traffic_percent: challengerTrafficPercent
   });
   const fallbackContext = buildRuleContext();
 
@@ -1362,6 +1750,38 @@ export async function analyzeTransaction(
       .eq("active", true)
       .in("entity_type", ["user", "device"]);
 
+    if (input.device_id) {
+      const { data: currentDevice } = await client
+        .from("devices")
+        .select("trust_score")
+        .eq("merchant_id", input.merchant_id)
+        .eq("id", input.device_id)
+        .maybeSingle();
+
+      if (currentDevice?.trust_score !== null && currentDevice?.trust_score !== undefined) {
+        deviceTrustScore = Math.max(deviceTrustScore, Number(currentDevice.trust_score));
+      }
+    }
+
+    if (input.session_id) {
+      const { data: activeSession } = await client
+        .from("sessions")
+        .select("failed_login_count, login_success, behavioral_biometrics")
+        .eq("merchant_id", input.merchant_id)
+        .eq("id", input.session_id)
+        .maybeSingle();
+
+      if (activeSession) {
+        const derivedFailedLoginCount =
+          Number(activeSession.failed_login_count ?? 0) + (activeSession.login_success === false ? 1 : 0);
+        failedLoginCount = Math.max(failedLoginCount, derivedFailedLoginCount);
+        behavioralAnomalyScore = Math.max(
+          behavioralAnomalyScore,
+          extractBehavioralBiometricsRisk(activeSession.behavioral_biometrics)
+        );
+      }
+    }
+
     if (input.user_id) {
       const oneHourAgoIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
       const twentyFourHoursAgoIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -1382,6 +1802,65 @@ export async function analyzeTransaction(
 
       velocityCount1h = Math.max(velocityCount1h, oneHourCount ?? 0);
       velocityCount24h = Math.max(velocityCount24h, dayCount ?? 0);
+
+      const { data: recentSessions } = await client
+        .from("sessions")
+        .select("device_id, login_success, failed_login_count, behavioral_biometrics")
+        .eq("merchant_id", input.merchant_id)
+        .eq("user_id", input.user_id)
+        .gte("started_at", twentyFourHoursAgoIso)
+        .order("started_at", { ascending: false })
+        .limit(25);
+
+      if (recentSessions && recentSessions.length > 0) {
+        if (input.device_id) {
+          const seenWithDevice = recentSessions.some((session) => session.device_id === input.device_id);
+          if (!seenWithDevice) {
+            isNewDevice = true;
+          }
+        }
+
+        const failedLoginSignals = recentSessions.reduce((sum, session) => {
+          return (
+            sum + Number(session.failed_login_count ?? 0) + (session.login_success === false ? 1 : 0)
+          );
+        }, 0);
+        failedLoginCount = Math.max(failedLoginCount, failedLoginSignals);
+
+        const sessionBehaviorRisk = recentSessions.reduce((maxScore, session) => {
+          const riskScore = extractBehavioralBiometricsRisk(session.behavioral_biometrics);
+          return Math.max(maxScore, riskScore);
+        }, 0);
+        behavioralAnomalyScore = Math.max(behavioralAnomalyScore, sessionBehaviorRisk);
+      }
+
+      const { data: behavioralRows } = await client
+        .from("behavioral_patterns")
+        .select("score, status, pattern_payload")
+        .eq("merchant_id", input.merchant_id)
+        .eq("user_id", input.user_id)
+        .order("observed_at", { ascending: false })
+        .limit(20);
+
+      if (behavioralRows && behavioralRows.length > 0) {
+        behavioralAnomalyScore = Math.max(
+          behavioralAnomalyScore,
+          extractBehavioralPatternRisk(behavioralRows as Array<Record<string, unknown>>)
+        );
+      }
+
+      const { data: latestVerification } = await client
+        .from("identity_verifications")
+        .select("status")
+        .eq("merchant_id", input.merchant_id)
+        .eq("user_id", input.user_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (typeof latestVerification?.status === "string") {
+        identityVerified = latestVerification.status === "verified";
+      }
 
       const { data: latestTransaction } = await client
         .from("transactions")
@@ -1436,6 +1915,33 @@ export async function analyzeTransaction(
       }
     }
 
+    const deploymentTarget = "transaction";
+    const { data: deployment } = await client
+      .from("model_deployments")
+      .select("active_model_id, challenger_model_id, challenger_traffic_percent")
+      .eq("merchant_id", input.merchant_id)
+      .eq("deployment_target", deploymentTarget)
+      .maybeSingle();
+
+    if (deployment?.active_model_id) {
+      challengerTrafficPercent = Number(deployment.challenger_traffic_percent ?? 0);
+      const assignmentSeed =
+        input.external_transaction_id ??
+        input.merchant_order_id ??
+        input.user_id ??
+        input.session_id ??
+        `${amount}:${input.currency ?? "USD"}:${input.channel ?? "web"}`;
+      const assignment = selectDeployedModel({
+        activeModelId: deployment.active_model_id,
+        challengerModelId: deployment.challenger_model_id ?? null,
+        challengerTrafficPercent,
+        seed: assignmentSeed
+      });
+      selectedModelId = assignment.modelId;
+      selectedModelVariant = assignment.variant;
+      selectedModelBucket = assignment.bucket;
+    }
+
     const derivedRisk = calculateHeuristicRisk({
       amount,
       isNewDevice,
@@ -1445,7 +1951,10 @@ export async function analyzeTransaction(
       loginGapMinutes,
       failedLoginCount,
       chargebackHistoryCount,
-      paymentMethodValidated
+      paymentMethodValidated,
+      identityVerified,
+      deviceTrustScore,
+      behavioralAnomalyScore
     });
     const normalizedDerivedScore = derivedRisk.normalizedScore;
     const whitelistMatch = (entityListRows ?? []).some(
@@ -1470,6 +1979,9 @@ export async function analyzeTransaction(
     const derivedHeuristicDecision =
       finalHeuristicScore >= 85 ? "block" : finalHeuristicScore >= 60 ? "review" : "approve";
     const derivedBaseExplanation = [...adjustedRisk.explanation];
+    if (selectedModelVariant === "challenger") {
+      derivedBaseExplanation.push("model_variant_challenger");
+    }
 
     const activeRules = await fetchActiveRuleRecords(client, input.merchant_id);
     const context = buildRuleContext();
@@ -1524,6 +2036,7 @@ export async function analyzeTransaction(
       entity_type: "transaction",
       entity_id: transactionRow.id,
       transaction_id: transactionRow.id,
+      model_id: selectedModelId,
       score: finalHeuristicScore,
       recommended_action: finalDecision === "approve" ? "allow" : finalDecision,
       reasons: explanation,
@@ -1538,8 +2051,13 @@ export async function analyzeTransaction(
         failed_login_count: failedLoginCount,
         chargeback_history_count: chargebackHistoryCount,
         payment_method_validated: paymentMethodValidated,
+        identity_verified: identityVerified,
         user_in_whitelist: userInWhitelist,
-        device_trust_score: deviceTrustScore
+        device_trust_score: deviceTrustScore,
+        behavioral_anomaly_score: behavioralAnomalyScore,
+        model_variant: selectedModelVariant,
+        model_assignment_bucket: selectedModelBucket,
+        challenger_traffic_percent: challengerTrafficPercent
       }
     });
 
@@ -1548,6 +2066,17 @@ export async function analyzeTransaction(
     if (finalDecision === "review" || finalDecision === "block") {
       const alertSeverity = finalDecision === "block" ? "critical" : "high";
       const alertType = finalDecision === "block" ? "Blocked Transaction" : "Transaction Review Required";
+      const { data: endpoints } = await client
+        .from("webhook_endpoints")
+        .select("id, target_url, secret_hash, subscribed_events")
+        .eq("merchant_id", input.merchant_id)
+        .eq("active", true);
+      const deliveryChannels = buildAlertDeliveryChannels(
+        (endpoints ?? []).map((endpoint) => ({
+          target_url: endpoint.target_url
+        }))
+      );
+
       const { data: alertRow } = await client
         .from("alerts")
         .insert({
@@ -1559,7 +2088,7 @@ export async function analyzeTransaction(
           severity: alertSeverity,
           title: alertType,
           summary: explanation.join(", "),
-          delivery_channels: ["dashboard", "webhook"]
+          delivery_channels: deliveryChannels
         })
         .select("id")
         .single();
@@ -1598,12 +2127,6 @@ export async function analyzeTransaction(
         case_id: caseId ?? null
       };
 
-      const { data: endpoints } = await client
-        .from("webhook_endpoints")
-        .select("id, target_url, secret_hash, subscribed_events")
-        .eq("merchant_id", input.merchant_id)
-        .eq("active", true);
-
       for (const endpoint of endpoints ?? []) {
         const subscribedEvents = (endpoint.subscribed_events ?? []) as string[];
         if (
@@ -1619,7 +2142,10 @@ export async function analyzeTransaction(
           .insert({
             webhook_endpoint_id: endpoint.id,
             event_type: eventType,
-            payload: eventPayload,
+            payload: {
+              ...eventPayload,
+              delivery_channel: inferDeliveryChannel(endpoint.target_url)
+            },
             status: "pending",
             attempt_count: 0
           })
@@ -1630,35 +2156,50 @@ export async function analyzeTransaction(
           continue;
         }
 
-        try {
-          const response = await fetch(endpoint.target_url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-TrustGuard-Signature": endpoint.secret_hash
-            },
-            body: JSON.stringify(eventPayload)
-          });
+        const maxAttempts = 3;
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+          try {
+            const response = await fetch(endpoint.target_url, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-TrustGuard-Signature": endpoint.secret_hash
+              },
+              body: JSON.stringify(eventPayload)
+            });
 
-          await client
-            .from("webhook_deliveries")
-            .update({
-              status: response.ok ? "delivered" : "retrying",
-              response_code: response.status,
-              attempt_count: 1,
-              last_attempted_at: new Date().toISOString(),
-              delivered_at: response.ok ? new Date().toISOString() : null
-            })
-            .eq("id", delivery.id);
-        } catch {
-          await client
-            .from("webhook_deliveries")
-            .update({
-              status: "retrying",
-              attempt_count: 1,
-              last_attempted_at: new Date().toISOString()
-            })
-            .eq("id", delivery.id);
+            const delivered = response.ok;
+            const status =
+              delivered ? "delivered" : attempt < maxAttempts ? "retrying" : "failed";
+            await client
+              .from("webhook_deliveries")
+              .update({
+                status,
+                response_code: response.status,
+                attempt_count: attempt,
+                last_attempted_at: new Date().toISOString(),
+                delivered_at: delivered ? new Date().toISOString() : null
+              })
+              .eq("id", delivery.id);
+
+            if (delivered || attempt === maxAttempts) {
+              break;
+            }
+          } catch {
+            const status = attempt < maxAttempts ? "retrying" : "failed";
+            await client
+              .from("webhook_deliveries")
+              .update({
+                status,
+                attempt_count: attempt,
+                last_attempted_at: new Date().toISOString()
+              })
+              .eq("id", delivery.id);
+
+            if (attempt === maxAttempts) {
+              break;
+            }
+          }
         }
       }
     }
@@ -1706,5 +2247,7 @@ export async function analyzeTransaction(
 export const __internal = {
   evaluateRuleCondition,
   calculateHeuristicRisk,
-  selectFinalDecision
+  selectFinalDecision,
+  buildDeviceTrustProfile,
+  selectDeployedModel
 };

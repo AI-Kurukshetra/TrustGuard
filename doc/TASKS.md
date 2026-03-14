@@ -41,3 +41,12 @@
 - [x] 2026-03-14 14:36 Add dashboard action controls for cases/rules/alerts and fix logout redirect method issue causing `/login` HTTP 405
 - [x] 2026-03-14 15:02 Add first-signup onboarding guide page and redirect new signups to guided setup
 - [x] 2026-03-14 15:00 Audit completion state for all core/advanced PRD features and publish a remaining-scope execution roadmap
+- [x] 2026-03-14 15:05 Phase R1 start: integrate session/behavioral anomaly and failed-login signals into transaction scoring + rule context for stronger ATO detection
+- [x] 2026-03-14 15:11 Phase R1: implement device trust profiling (novelty/stability/risk-decay signals) in `/api/devices/register` and persist trust metadata
+- [x] 2026-03-14 15:13 Phase R1: upgrade payment method validation to adapter-based scoring with persisted validation evidence
+- [x] 2026-03-14 15:16 Phase R1: expand alert delivery to inferred webhook/email/slack channels with retry/fail state tracking
+- [x] 2026-03-14 15:14 Add JavaScript integration agent wrapper and integration docs/examples to simplify backend onboarding
+- [x] 2026-03-14 15:18 Add in-product API documentation (`/api-docs`) with route coverage checks for newly added APIs
+- [x] 2026-03-14 15:21 Phase R2 start: add identity-verification update/callback APIs and incorporate verification status into transaction scoring
+- [x] 2026-03-14 15:25 Phase R2: add model deployment control plane (active/challenger traffic split) and persist model assignment in scoring snapshots
+- [x] 2026-03-14 15:29 Add live execution tracking board in `doc/ROADMAP.md` for all 20 core + 12 advanced features with queue ordering

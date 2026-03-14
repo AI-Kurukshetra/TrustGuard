@@ -34,3 +34,21 @@
 - Route first-time signups to a dedicated onboarding page (`/onboarding`) so integration setup and first API call steps are explicit before users explore the broader dashboard.
 - Use a three-state feature maturity rubric (`Complete (MVP)`, `Partial`, `Not Started`) for roadmap governance so planning reflects actual implementation depth instead of binary done/not-done labels.
 - Prioritize remaining roadmap phases by dependency and business risk: finish must-have detection gaps first, then model/identity operations, then graph/multi-channel depth, and only then advanced differentiators.
+- Derive ATO risk from recent session telemetry (`failed_login_count`, `login_success`, and unseen device activity) inside transaction scoring so detection does not rely only on caller-supplied fields.
+- Normalize behavioral anomaly evidence from both `sessions.behavioral_biometrics` and `behavioral_patterns` into a unified `behavioral_anomaly_score` exposed to heuristics and rule evaluation context.
+- Treat device fingerprint confidence as a scored profile instead of a static value: compute trust from novelty, account stability, successful usage history, and recent failed-login pressure.
+- Keep device identity stable by upserting on `(merchant_id, device_hash)` and updating `last_seen_at` + trust metadata, rather than creating duplicate device records for repeat fingerprints.
+- Add a first-party JS integration agent (`TrustGuardJsAgent`) in-repo so backend adopters can integrate via a typed client instead of hand-rolling fetch headers/retry/timeout logic.
+- Keep the JS agent transport-level and endpoint-compatible (no API contract changes), so existing curl/API-key integrations continue to work unchanged while new integrations get a simpler path.
+- Replace binary payment validation with adapter-scored results and reason codes so downstream rules/cases can distinguish weak vs strong validation outcomes.
+- Persist payment-validation evidence in `payment_methods.metadata.validation` to keep audit context close to the payment method record without introducing a new table in this phase.
+- Maintain API docs as product UX, not only markdown: publish endpoint reference directly at `/api-docs` so operators can integrate without leaving the dashboard.
+- Keep API docs reliable by enforcing route-method coverage in tests (`tests/api-reference-coverage.test.ts`) against the shared source (`lib/api-reference.ts`) to catch drift when new APIs are added.
+- Treat filesystem-level route discovery as authoritative for docs parity checks, so nested endpoints (for example callback handlers) are not missed by manual endpoint lists.
+- Infer alert delivery channel from endpoint URL shape (for example `mailto:` and Slack webhook hosts) so one endpoint registry can power multi-channel notifications without schema changes in this phase.
+- Apply bounded in-process retry (`maxAttempts=3`) to alert delivery updates and write final state (`delivered`, `retrying`, `failed`) into `webhook_deliveries` for analyst visibility.
+- Pull latest `identity_verifications.status` into real-time transaction scoring as `identity_verified` so unresolved identity checks directly influence risk decisions before authorization.
+- Add a dedicated `model_deployments` control-plane table rather than overloading `ml_models.status`, so one merchant/target can explicitly track active and challenger assignments with traffic split.
+- Use deterministic hash-based assignment (seeded by transaction/user identifiers) for challenger routing so model-variant selection is stable and reproducible across retries.
+- Persist selected deployment model id into `risk_scores.model_id` and snapshot fields to support downstream precision/recall analysis by variant.
+- Keep roadmap execution visible in-repo with a single live tracking board (core + advanced) so feature status and next priorities are explicit before each implementation cycle.
