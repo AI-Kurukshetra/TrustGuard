@@ -117,6 +117,9 @@ corepack pnpm exec vercel --version
 - `GET/POST /api/advanced/cryptography/keys`
 - `POST /api/advanced/blockchain/verify`
 - `POST /api/advanced/automl/run`
+- `GET /api/billing/entitlements`
+- `GET /api/billing/usage`
+- `GET /api/reports/scorecard`
 - `GET /api/auth/me`
 - `POST /api/auth/signup`
 - `POST /api/auth/login`
@@ -177,6 +180,7 @@ Supabase migrations are in:
 - `supabase/migrations/20260314155100_add_model_deployments.sql`
 - `supabase/migrations/20260314160500_add_compliance_schedules.sql`
 - `supabase/migrations/20260314172000_add_advanced_intelligence_features.sql`
+- `supabase/migrations/20260314173000_add_billing_usage_and_entitlements.sql`
 
 Canonical schema reference: `doc/SCHEMA.md`
 

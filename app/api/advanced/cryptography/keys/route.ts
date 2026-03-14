@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { requireMerchantAuth } from "@/lib/api-auth";
+import { checkFeatureAccess } from "@/lib/billing";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,18 @@ export async function GET(request: NextRequest) {
   const auth = await requireMerchantAuth(request, undefined, "viewer");
   if (!auth.ok) {
     return auth.response;
+  }
+
+  const featureAccess = await checkFeatureAccess({
+    client: auth.context.supabase ?? null,
+    merchantId: auth.context.merchantId,
+    feature: "quantum_crypto"
+  });
+  if (!featureAccess.allowed) {
+    return NextResponse.json(
+      { error: `Feature unavailable on ${featureAccess.planTier} plan. Upgrade required.` },
+      { status: 403 }
+    );
   }
 
   if (!hasSupabaseEnv() || !auth.context.supabase) {
@@ -40,6 +53,18 @@ export async function POST(request: NextRequest) {
   const auth = await requireMerchantAuth(request, body, "admin");
   if (!auth.ok) {
     return auth.response;
+  }
+
+  const featureAccess = await checkFeatureAccess({
+    client: auth.context.supabase ?? null,
+    merchantId: auth.context.merchantId,
+    feature: "quantum_crypto"
+  });
+  if (!featureAccess.allowed) {
+    return NextResponse.json(
+      { error: `Feature unavailable on ${featureAccess.planTier} plan. Upgrade required.` },
+      { status: 403 }
+    );
   }
 
   if (!hasSupabaseEnv() || !auth.context.supabase) {

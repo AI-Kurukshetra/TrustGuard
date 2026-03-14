@@ -1,5 +1,6 @@
 import { createSupabaseRequestClient } from "@/lib/supabase/request";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
+import { recordUsageEvent } from "@/lib/billing";
 
 type RequestScopedClient = ReturnType<typeof createSupabaseRequestClient>;
 
@@ -32,6 +33,18 @@ export async function recordApiRequestMetric(input: ApiMetricInput) {
       duration_ms: safeDuration,
       error_code: input.errorCode ?? null,
       metadata: input.metadata ?? {}
+    });
+
+    await recordUsageEvent({
+      client: input.client,
+      merchantId: input.merchantId,
+      eventType: "api_call",
+      quantity: 1,
+      metadata: {
+        route: input.route,
+        method: input.method.toUpperCase(),
+        status_code: input.statusCode
+      }
     });
   } catch {
     // Metrics writes are best-effort; never fail the API response.

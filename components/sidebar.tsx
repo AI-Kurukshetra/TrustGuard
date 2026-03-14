@@ -23,6 +23,7 @@ const sections: SidebarSection[] = [
     heading: "Workspace",
     links: [
       { href: "/", label: "Command Center", meta: "Realtime overview", icon: "CC" },
+      { href: "/scorecard", label: "Scorecard", meta: "Plan & KPI view", icon: "SC" },
       { href: "/onboarding", label: "Onboarding", meta: "First-run guide", icon: "OB" }
     ]
   },

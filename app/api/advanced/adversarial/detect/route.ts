@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { detectAdversarialSignals } from "@/lib/advanced-intelligence";
 import { requireMerchantAuth } from "@/lib/api-auth";
+import { checkFeatureAccess } from "@/lib/billing";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { analyzeTransaction } from "@/lib/trustguard-data";
 
@@ -11,6 +12,18 @@ export async function POST(request: NextRequest) {
   const auth = await requireMerchantAuth(request, body, "analyst");
   if (!auth.ok) {
     return auth.response;
+  }
+
+  const featureAccess = await checkFeatureAccess({
+    client: auth.context.supabase ?? null,
+    merchantId: auth.context.merchantId,
+    feature: "advanced_detection_suite"
+  });
+  if (!featureAccess.allowed) {
+    return NextResponse.json(
+      { error: `Feature unavailable on ${featureAccess.planTier} plan. Upgrade required.` },
+      { status: 403 }
+    );
   }
 
   const payload =

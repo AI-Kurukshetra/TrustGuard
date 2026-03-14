@@ -443,6 +443,30 @@ export const API_METHOD_REFERENCES: ApiMethodReference[] = [
   {
     groupId: "analytics",
     method: "GET",
+    path: "/api/reports/scorecard",
+    role: "viewer",
+    auth: "operator_or_api_key",
+    summary: "Read combined business scorecard (plan usage, KPI metrics, and operations snapshot)."
+  },
+  {
+    groupId: "analytics",
+    method: "GET",
+    path: "/api/billing/entitlements",
+    role: "viewer",
+    auth: "operator_or_api_key",
+    summary: "Read current plan tier, feature entitlements, and monthly usage progress."
+  },
+  {
+    groupId: "analytics",
+    method: "GET",
+    path: "/api/billing/usage",
+    role: "viewer",
+    auth: "operator_or_api_key",
+    summary: "Read monthly usage events with daily rollups for billing reconciliation."
+  },
+  {
+    groupId: "analytics",
+    method: "GET",
     path: "/api/compliance/reports",
     role: "viewer",
     auth: "operator_or_api_key",

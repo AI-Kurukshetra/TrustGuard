@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { requireMerchantAuth } from "@/lib/api-auth";
+import { checkFeatureAccess } from "@/lib/billing";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { hasSupabaseEnv, hasSupabaseServiceRoleEnv } from "@/lib/supabase/config";
 
@@ -14,6 +15,18 @@ export async function GET(request: NextRequest) {
   const auth = await requireMerchantAuth(request, undefined, "viewer");
   if (!auth.ok) {
     return auth.response;
+  }
+
+  const featureAccess = await checkFeatureAccess({
+    client: auth.context.supabase ?? null,
+    merchantId: auth.context.merchantId,
+    feature: "cross_merchant_intelligence"
+  });
+  if (!featureAccess.allowed) {
+    return NextResponse.json(
+      { error: `Feature unavailable on ${featureAccess.planTier} plan. Upgrade required.` },
+      { status: 403 }
+    );
   }
 
   if (!hasSupabaseEnv()) {
@@ -76,6 +89,18 @@ export async function POST(request: NextRequest) {
   const auth = await requireMerchantAuth(request, body, "analyst");
   if (!auth.ok) {
     return auth.response;
+  }
+
+  const featureAccess = await checkFeatureAccess({
+    client: auth.context.supabase ?? null,
+    merchantId: auth.context.merchantId,
+    feature: "cross_merchant_intelligence"
+  });
+  if (!featureAccess.allowed) {
+    return NextResponse.json(
+      { error: `Feature unavailable on ${featureAccess.planTier} plan. Upgrade required.` },
+      { status: 403 }
+    );
   }
 
   if (!hasSupabaseEnv() || !auth.context.supabase) {

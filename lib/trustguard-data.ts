@@ -2187,6 +2187,22 @@ export async function analyzeTransaction(
         .single();
       alertId = alertRow?.id;
 
+      if (alertId) {
+        try {
+          await client.from("merchant_usage_events").insert({
+            merchant_id: input.merchant_id,
+            event_type: "alert_generated",
+            quantity: 1,
+            metadata: {
+              severity: alertSeverity,
+              alert_type: alertType
+            }
+          });
+        } catch {
+          // Usage metering is best-effort and should not break scoring flow.
+        }
+      }
+
       const { data: fraudCaseRow } = await client
         .from("fraud_cases")
         .insert({
