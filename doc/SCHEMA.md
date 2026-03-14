@@ -661,6 +661,44 @@ Indexes:
 - index on `webhook_endpoint_id, created_at desc`
 - index on `status`
 
+### daily_risk_metrics
+
+Daily aggregated fraud KPIs for historical analysis and dashboard reporting.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | primary key |
+| `merchant_id` | `uuid` | fk -> `merchants.id`, not null |
+| `metric_date` | `date` | one row per day per merchant |
+| `total_transactions` | `integer` | aggregated count |
+| `blocked_transactions` | `integer` | aggregated count |
+| `review_transactions` | `integer` | aggregated count |
+| `approved_transactions` | `integer` | aggregated count |
+| `blocked_amount` | `numeric(18,2)` | aggregated currency amount |
+| `chargeback_count` | `integer` | aggregated count |
+| `avg_risk_score` | `numeric(6,2)` | daily average |
+| `created_at` | `timestamptz` | default `now()` |
+
+### entity_connections
+
+Graph foundation table that materializes risk relationships between entities.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | primary key |
+| `merchant_id` | `uuid` | fk -> `merchants.id`, not null |
+| `left_entity_type` | `risk_entity_type` | left node type |
+| `left_entity_id` | `uuid` | left node id |
+| `right_entity_type` | `risk_entity_type` | right node type |
+| `right_entity_id` | `uuid` | right node id |
+| `relation_type` | `text` | shared_device, shared_ip, shared_payment_method, etc. |
+| `weight` | `numeric(10,4)` | confidence/strength |
+| `evidence` | `jsonb` | supporting details |
+| `first_seen_at` | `timestamptz` | first observed |
+| `last_seen_at` | `timestamptz` | last observed |
+| `created_at` | `timestamptz` | default `now()` |
+| `updated_at` | `timestamptz` | default `now()` |
+
 ## Relationship Summary
 
 - `merchants` 1 -> many `users`
