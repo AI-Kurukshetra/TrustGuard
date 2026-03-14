@@ -756,6 +756,22 @@ export const API_METHOD_REFERENCES: ApiMethodReference[] = [
   },
   {
     groupId: "auth",
+    method: "GET",
+    path: "/api/profile",
+    role: "viewer",
+    auth: "operator_session",
+    summary: "Return current operator profile metadata for dashboard profile settings."
+  },
+  {
+    groupId: "auth",
+    method: "PATCH",
+    path: "/api/profile",
+    role: "viewer",
+    auth: "operator_session",
+    summary: "Update current operator profile metadata (full_name and job_title)."
+  },
+  {
+    groupId: "auth",
     method: "POST",
     path: "/api/auth/signup",
     role: "public",

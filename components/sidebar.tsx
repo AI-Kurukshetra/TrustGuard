@@ -23,8 +23,6 @@ const sections: SidebarSection[] = [
     heading: "Workspace",
     links: [
       { href: "/", label: "Command Center", meta: "Realtime overview", icon: "CC" },
-      { href: "/billing", label: "Billing", meta: "Plans & invoices", icon: "BL" },
-      { href: "/scorecard", label: "Scorecard", meta: "Plan & KPI view", icon: "SC" },
       { href: "/onboarding", label: "Onboarding", meta: "First-run guide", icon: "OB" }
     ]
   },
@@ -44,6 +42,12 @@ const sections: SidebarSection[] = [
       { href: "/api-docs", label: "API Docs", meta: "Integration reference", icon: "API" }
     ]
   }
+];
+
+const accountLinks: SidebarLink[] = [
+  { href: "/profile", label: "Profile", meta: "Edit operator details", icon: "PF" },
+  { href: "/billing", label: "Billing", meta: "Plans & invoices", icon: "BL" },
+  { href: "/scorecard", label: "Scorecard", meta: "Plan & KPI view", icon: "SC" }
 ];
 
 export function Sidebar({ pathname, header }: { pathname: string; header?: ReactNode }) {
@@ -132,6 +136,52 @@ export function SidebarNavigation({
         <div className="mt-auto space-y-4">
           {header}
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Account</div>
+            <div className="mt-3 space-y-2">
+              {accountLinks.map((link) => {
+                const active = pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    aria-current={active ? "page" : undefined}
+                    onClick={onNavigate}
+                    className={cn(
+                      "group flex items-start gap-3 rounded-xl border px-3 py-2.5 transition",
+                      active
+                        ? "border-pulse/55 bg-pulse/15 text-white"
+                        : "border-white/10 bg-black/20 text-slate-200 hover:border-white/20 hover:bg-black/30"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "mt-0.5 grid h-6 min-w-6 place-items-center rounded-md border text-[9px] font-semibold leading-none",
+                        active
+                          ? "border-pulse/45 bg-pulse/20 text-pulse"
+                          : "border-white/10 bg-black/25 text-slate-400 group-hover:border-white/20 group-hover:text-slate-200"
+                      )}
+                      aria-hidden="true"
+                    >
+                      {link.icon}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium">{link.label}</span>
+                      <span className="block text-xs text-slate-400">{link.meta}</span>
+                    </span>
+                  </Link>
+                );
+              })}
+              <form action="/api/auth/logout" method="post">
+                <button
+                  type="submit"
+                  className="w-full rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2.5 text-left text-sm font-medium text-slate-200 transition hover:border-white/25 hover:bg-white/[0.08]"
+                >
+                  Sign out
+                </button>
+              </form>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
             <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Quick Access</div>
             <div className="mt-3 space-y-2">
               <Link
@@ -156,14 +206,6 @@ export function SidebarNavigation({
               Payment fraud detection, device fingerprinting, velocity checks, rules, alerts, and analyst tooling.
             </p>
           </div>
-          <form action="/api/auth/logout" method="post">
-            <button
-              type="submit"
-              className="w-full rounded-2xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-left text-sm font-medium text-slate-200 transition hover:border-white/25 hover:bg-white/[0.08]"
-            >
-              Sign out
-            </button>
-          </form>
         </div>
       </div>
     </aside>

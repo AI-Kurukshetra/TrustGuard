@@ -51,6 +51,7 @@ App default URL: `http://localhost:3000`
 1. Open `http://localhost:3000/signup` and create your operator account + merchant workspace.
 2. You are signed in automatically and redirected to onboarding (`/onboarding`).
 3. Use the sidebar to navigate:
+   - `Profile` to update operator account details
    - `Onboarding` for first-run setup checklist
    - `Billing` for plan limits, entitlements, and billing readiness
    - `Command Center` for live KPIs and queue
@@ -122,6 +123,7 @@ corepack pnpm exec vercel --version
 - `GET /api/billing/usage`
 - `GET /api/reports/scorecard`
 - `GET /api/auth/me`
+- `GET/PATCH /api/profile`
 - `POST /api/auth/signup`
 - `POST /api/auth/login`
 - `GET|POST /api/auth/logout`

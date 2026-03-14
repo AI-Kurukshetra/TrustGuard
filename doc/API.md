@@ -367,6 +367,24 @@ Refreshes user-level `risk_score` using a composite profile (recent transaction 
 
 Returns authenticated user identity and active merchant memberships from Supabase auth token.
 
+### GET/PATCH `/api/profile`
+
+Role: `viewer` with operator session auth (not API key).
+
+Supports:
+
+- `GET` current operator profile metadata (`email`, `full_name`, `job_title`)
+- `PATCH` update operator metadata for dashboard identity context
+
+Patch request body:
+
+```json
+{
+  "full_name": "Jane Doe",
+  "job_title": "Fraud Operations Lead"
+}
+```
+
 ### POST `/api/auth/signup`
 
 Request body:

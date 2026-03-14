@@ -122,3 +122,6 @@
 - Wired automated quota notification creation into `POST /api/transactions/analyze` for both transaction and API metering checks.
 - Extended `GET /api/billing/usage` responses with period quota notification records and surfaced recent billing quota alerts in `/scorecard`.
 - Added `app/(dashboard)/billing/page.tsx` and sidebar navigation entry for a dedicated billing view with plan usage, entitlement status, upgrade CTA, and invoice-history placeholder.
+- Moved `Billing` and `Scorecard` out of the top workspace nav into a bottom `Account` action group with sign-out in `components/sidebar.tsx`.
+- Added operator profile management: `app/(dashboard)/profile/page.tsx`, `components/profile/profile-editor.tsx`, and `GET/PATCH /api/profile`.
+- Updated API/reference docs (`lib/api-reference.ts`, `doc/API.md`, `README.md`) to include profile endpoint and profile navigation entry.

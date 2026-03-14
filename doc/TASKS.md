@@ -67,3 +67,4 @@
 - [x] 2026-03-14 16:40 Gate advanced endpoints by plan entitlement (advanced suite, federated learning, cross-merchant intelligence, quantum crypto)
 - [x] 2026-03-14 16:45 Add automated quota-threshold notifications (85%/100%) with deduped billing alerts and usage API exposure
 - [x] 2026-03-14 16:52 Add dedicated `/billing` page with plan details, upgrade CTA, and invoice-history placeholder
+- [x] 2026-03-14 16:56 Move billing/scorecard to bottom account actions with logout and add editable profile flow (`/profile`, `/api/profile`)
