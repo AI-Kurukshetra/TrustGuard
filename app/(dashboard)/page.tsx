@@ -1,6 +1,7 @@
 import { PageShell } from "@/components/page-shell";
 import { RiskBadge } from "@/components/risk-badge";
 import { SectionCard } from "@/components/section-card";
+import { getRequestAuthContext } from "@/lib/auth/request-context";
 import { StatCard } from "@/components/stat-card";
 import { getDashboardData, getDashboardKpiSummaryData } from "@/lib/trustguard-data";
 import { formatCurrency, formatTimestamp } from "@/lib/utils";
@@ -8,9 +9,10 @@ import { formatCurrency, formatTimestamp } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const authContext = getRequestAuthContext();
   const [{ alerts, fraudCases, metrics, transactions }, kpis] = await Promise.all([
-    getDashboardData(),
-    getDashboardKpiSummaryData(30)
+    getDashboardData(authContext.merchantId ?? undefined, authContext.client ?? undefined),
+    getDashboardKpiSummaryData(30, authContext.merchantId ?? undefined, authContext.client ?? undefined)
   ]);
 
   return (
@@ -56,6 +58,34 @@ export default async function DashboardPage() {
               Drift: <span className="capitalize">{kpis.modelDriftSignal}</span>
             </div>
           </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="How operators use TrustGuard" eyebrow="Flow">
+        <div className="grid gap-3 md:grid-cols-4">
+          {[
+            {
+              title: "1. Monitor",
+              body: "Watch incoming transactions, latency, and risk trends from the command center."
+            },
+            {
+              title: "2. Investigate",
+              body: "Open alerts and cases to review suspicious devices, geography, and behavior signals."
+            },
+            {
+              title: "3. Decide",
+              body: "Approve, review, or block high-risk activity with explainable rule and score context."
+            },
+            {
+              title: "4. Improve",
+              body: "Tune risk rules, validate outcomes, and track KPI impact over time."
+            }
+          ].map((item) => (
+            <div key={item.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="font-medium text-white">{item.title}</div>
+              <p className="mt-2 text-sm text-slate-300">{item.body}</p>
+            </div>
+          ))}
         </div>
       </SectionCard>
 

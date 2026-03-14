@@ -28,3 +28,6 @@
 [2026-03-14 13:28] codex — Updated smoke script for idempotent inserts and validated full checklist (lint, typecheck, unit tests, smoke API) passes against local server with Supabase-backed auth.
 [2026-03-14 13:41] codex — Added pricing/GTM/differentiation docs, implemented API KPI instrumentation (`api_request_metrics` + `/api/reports/kpis`), and validated live authenticated KPI responses after migration push.
 [2026-03-14 13:49] codex — Added KPI pulse cards to dashboard and wired page data-loading to new server KPI summary function in `lib/trustguard-data.ts`.
+[2026-03-14 13:58] codex — Added migration `20260314143000_seed_remaining_tables.sql`, fixed FK-safe fraud-pattern seeding via dynamic connection lookup, pushed migration, and verified non-zero row counts across all schema tables.
+[2026-03-14 14:09] codex — Added operator signup/login/logout endpoints, auth pages, dashboard auth guard, cookie-backed merchant context, and tenant-scoped dashboard data loading for authenticated sessions.
+[2026-03-14 14:23] codex — Added `integration_api_keys` migration + push, enabled API-key auth in `requireMerchantAuth`, implemented integration key CRUD endpoints and dashboard setup UI, and documented one-live-Supabase setup for local and Vercel.

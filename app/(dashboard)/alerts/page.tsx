@@ -1,12 +1,14 @@
 import { PageShell } from "@/components/page-shell";
 import { SectionCard } from "@/components/section-card";
+import { getRequestAuthContext } from "@/lib/auth/request-context";
 import { getAlertsData } from "@/lib/trustguard-data";
 import { formatTimestamp } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function AlertsPage() {
-  const alerts = await getAlertsData();
+  const authContext = getRequestAuthContext();
+  const alerts = await getAlertsData(authContext.merchantId ?? undefined, authContext.client ?? undefined);
 
   return (
     <PageShell

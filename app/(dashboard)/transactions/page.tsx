@@ -1,13 +1,18 @@
 import { PageShell } from "@/components/page-shell";
 import { RiskBadge } from "@/components/risk-badge";
 import { SectionCard } from "@/components/section-card";
+import { getRequestAuthContext } from "@/lib/auth/request-context";
 import { getTransactionsData } from "@/lib/trustguard-data";
 import { formatCurrency, formatTimestamp } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function TransactionsPage() {
-  const { transactions, users } = await getTransactionsData();
+  const authContext = getRequestAuthContext();
+  const { transactions, users } = await getTransactionsData(
+    authContext.merchantId ?? undefined,
+    authContext.client ?? undefined
+  );
 
   return (
     <PageShell

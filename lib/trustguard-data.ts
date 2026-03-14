@@ -40,6 +40,18 @@ interface CaseData {
   transactions: Transaction[];
 }
 
+export interface IntegrationApiKey {
+  id: string;
+  name: string;
+  role: "admin" | "analyst" | "viewer";
+  active: boolean;
+  maskedKey: string;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
 interface RiskProfile {
   user: User;
   device: Device | null;
@@ -388,11 +400,17 @@ function normalizeCaseStatus(status: string): FraudCase["status"] {
   return "open";
 }
 
-async function fetchUsers(client: SupabaseClientLike) {
-  const { data, error } = await client
+async function fetchUsers(client: SupabaseClientLike, merchantId?: string) {
+  let query = client
     .from("users")
     .select("id, email, risk_score, created_at, home_country")
     .order("created_at", { ascending: false });
+
+  if (merchantId) {
+    query = query.eq("merchant_id", merchantId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw error;
@@ -410,11 +428,17 @@ async function fetchUsers(client: SupabaseClientLike) {
   );
 }
 
-async function fetchDevices(client: SupabaseClientLike) {
-  const { data, error } = await client
+async function fetchDevices(client: SupabaseClientLike, merchantId?: string) {
+  let query = client
     .from("devices")
     .select("id, user_id, device_hash, browser, os, ip_address, trust_score, last_seen_at")
     .order("last_seen_at", { ascending: false, nullsFirst: false });
+
+  if (merchantId) {
+    query = query.eq("merchant_id", merchantId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw error;
@@ -434,13 +458,19 @@ async function fetchDevices(client: SupabaseClientLike) {
   );
 }
 
-async function fetchTransactions(client: SupabaseClientLike) {
-  const { data, error } = await client
+async function fetchTransactions(client: SupabaseClientLike, merchantId?: string) {
+  let query = client
     .from("transactions")
     .select(
       "id, user_id, amount, currency, status, risk_score, occurred_at, city, country_code, channel, decision_reason, device_id"
     )
     .order("occurred_at", { ascending: false });
+
+  if (merchantId) {
+    query = query.eq("merchant_id", merchantId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw error;
@@ -491,11 +521,17 @@ async function fetchAlerts(client: SupabaseClientLike, merchantId?: string) {
   );
 }
 
-async function fetchFraudCases(client: SupabaseClientLike) {
-  const { data, error } = await client
+async function fetchFraudCases(client: SupabaseClientLike, merchantId?: string) {
+  let query = client
     .from("fraud_cases")
     .select("id, transaction_id, status, analyst_notes, created_at, assigned_to")
     .order("created_at", { ascending: false });
+
+  if (merchantId) {
+    query = query.eq("merchant_id", merchantId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw error;
@@ -513,11 +549,17 @@ async function fetchFraudCases(client: SupabaseClientLike) {
   );
 }
 
-async function fetchRiskRules(client: SupabaseClientLike) {
-  const { data, error } = await client
+async function fetchRiskRules(client: SupabaseClientLike, merchantId?: string) {
+  let query = client
     .from("risk_rules")
     .select("id, rule_name, condition_expression, action, active, hit_count")
     .order("priority", { ascending: true });
+
+  if (merchantId) {
+    query = query.eq("merchant_id", merchantId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw error;
@@ -531,6 +573,32 @@ async function fetchRiskRules(client: SupabaseClientLike) {
       action: normalizeRuleAction(row.action),
       active: row.active ?? true,
       hitRate: Number(row.hit_count ?? 0)
+    })
+  );
+}
+
+async function fetchIntegrationApiKeys(client: SupabaseClientLike, merchantId: string) {
+  const { data, error } = await client
+    .from("integration_api_keys")
+    .select("id, name, key_prefix, role, active, last_used_at, expires_at, revoked_at, created_at")
+    .eq("merchant_id", merchantId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map(
+    (row): IntegrationApiKey => ({
+      id: row.id,
+      name: row.name,
+      role: (row.role as IntegrationApiKey["role"]) ?? "viewer",
+      active: row.active ?? false,
+      maskedKey: `${row.key_prefix}********`,
+      lastUsedAt: row.last_used_at ?? null,
+      expiresAt: row.expires_at ?? null,
+      revokedAt: row.revoked_at ?? null,
+      createdAt: row.created_at
     })
   );
 }
@@ -652,31 +720,34 @@ function fallbackKpiSummary(): KpiSummary {
   };
 }
 
-export async function getUsersData() {
+export async function getUsersData(merchantId?: string, client?: SupabaseClientLike) {
   if (!hasSupabaseEnv()) {
     return mockUsers;
   }
 
   try {
-    return await fetchUsers(getReadClient());
+    return await fetchUsers(client ?? getReadClient(), merchantId);
   } catch {
     return mockUsers;
   }
 }
 
-export async function getDevicesData() {
+export async function getDevicesData(merchantId?: string, client?: SupabaseClientLike) {
   if (!hasSupabaseEnv()) {
     return mockDevices;
   }
 
   try {
-    return await fetchDevices(getReadClient());
+    return await fetchDevices(client ?? getReadClient(), merchantId);
   } catch {
     return mockDevices;
   }
 }
 
-export async function getTransactionsData(): Promise<TransactionsData> {
+export async function getTransactionsData(
+  merchantId?: string,
+  client?: SupabaseClientLike
+): Promise<TransactionsData> {
   if (!hasSupabaseEnv()) {
     return {
       transactions: mockTransactions,
@@ -685,7 +756,11 @@ export async function getTransactionsData(): Promise<TransactionsData> {
   }
 
   try {
-    const [transactions, users] = await Promise.all([fetchTransactions(getReadClient()), fetchUsers(getReadClient())]);
+    const db = client ?? getReadClient();
+    const [transactions, users] = await Promise.all([
+      fetchTransactions(db, merchantId),
+      fetchUsers(db, merchantId)
+    ]);
 
     return {
       transactions,
@@ -704,7 +779,7 @@ export async function getTransactionsData(): Promise<TransactionsData> {
   }
 }
 
-export async function getFraudCasesData(): Promise<CaseData> {
+export async function getFraudCasesData(merchantId?: string, client?: SupabaseClientLike): Promise<CaseData> {
   if (!hasSupabaseEnv()) {
     return {
       fraudCases: mockFraudCases,
@@ -713,9 +788,10 @@ export async function getFraudCasesData(): Promise<CaseData> {
   }
 
   try {
+    const db = client ?? getReadClient();
     const [fraudCases, transactions] = await Promise.all([
-      fetchFraudCases(getReadClient()),
-      fetchTransactions(getReadClient())
+      fetchFraudCases(db, merchantId),
+      fetchTransactions(db, merchantId)
     ]);
 
     return {
@@ -730,15 +806,30 @@ export async function getFraudCasesData(): Promise<CaseData> {
   }
 }
 
-export async function getRiskRulesData() {
+export async function getRiskRulesData(merchantId?: string, client?: SupabaseClientLike) {
   if (!hasSupabaseEnv()) {
     return mockRiskRules;
   }
 
   try {
-    return await fetchRiskRules(getReadClient());
+    return await fetchRiskRules(client ?? getReadClient(), merchantId);
   } catch {
     return mockRiskRules;
+  }
+}
+
+export async function getIntegrationApiKeysData(
+  merchantId?: string,
+  client?: SupabaseClientLike
+): Promise<IntegrationApiKey[]> {
+  if (!hasSupabaseEnv() || !merchantId) {
+    return [];
+  }
+
+  try {
+    return await fetchIntegrationApiKeys(client ?? getReadClient(), merchantId);
+  } catch {
+    return [];
   }
 }
 
@@ -754,7 +845,7 @@ export async function getAlertsData(merchantId?: string, client?: SupabaseClient
   }
 }
 
-export async function getDashboardData(): Promise<DashboardData> {
+export async function getDashboardData(merchantId?: string, client?: SupabaseClientLike): Promise<DashboardData> {
   if (!hasSupabaseEnv()) {
     return {
       alerts: mockAlerts,
@@ -765,10 +856,11 @@ export async function getDashboardData(): Promise<DashboardData> {
   }
 
   try {
+    const db = client ?? getReadClient();
     const [alerts, fraudCases, transactions] = await Promise.all([
-      fetchAlerts(getReadClient()),
-      fetchFraudCases(getReadClient()),
-      fetchTransactions(getReadClient())
+      fetchAlerts(db, merchantId),
+      fetchFraudCases(db, merchantId),
+      fetchTransactions(db, merchantId)
     ]);
 
     return {
@@ -787,7 +879,11 @@ export async function getDashboardData(): Promise<DashboardData> {
   }
 }
 
-export async function getDashboardKpiSummaryData(days = 30): Promise<KpiSummary> {
+export async function getDashboardKpiSummaryData(
+  days = 30,
+  merchantId?: string,
+  client?: SupabaseClientLike
+): Promise<KpiSummary> {
   if (!hasSupabaseEnv()) {
     return fallbackKpiSummary();
   }
@@ -795,30 +891,44 @@ export async function getDashboardKpiSummaryData(days = 30): Promise<KpiSummary>
   try {
     const clampedDays = Math.min(365, Math.max(1, Math.round(days)));
     const sinceTimestamp = new Date(Date.now() - clampedDays * 24 * 60 * 60 * 1000).toISOString();
-    const db = getReadClient();
+    const db = client ?? getReadClient();
+
+    let transactionsQuery = db
+      .from("transactions")
+      .select("status, amount")
+      .gte("occurred_at", sinceTimestamp);
+    let chargebacksQuery = db
+      .from("chargebacks")
+      .select("id", { count: "exact", head: true })
+      .gte("received_at", sinceTimestamp);
+    let apiMetricsQuery = db
+      .from("api_request_metrics")
+      .select("status_code, duration_ms")
+      .gte("created_at", sinceTimestamp);
+    let complianceQuery = db
+      .from("compliance_reports")
+      .select("status, generated_at")
+      .gte("created_at", sinceTimestamp);
+    let modelQuery = db
+      .from("ml_models")
+      .select("status, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(1);
+
+    if (merchantId) {
+      transactionsQuery = transactionsQuery.eq("merchant_id", merchantId);
+      chargebacksQuery = chargebacksQuery.eq("merchant_id", merchantId);
+      apiMetricsQuery = apiMetricsQuery.eq("merchant_id", merchantId);
+      complianceQuery = complianceQuery.eq("merchant_id", merchantId);
+      modelQuery = modelQuery.eq("merchant_id", merchantId);
+    }
 
     const [transactionsRes, chargebacksRes, apiMetricsRes, complianceRes, modelRes] = await Promise.all([
-      db
-        .from("transactions")
-        .select("status, amount")
-        .gte("occurred_at", sinceTimestamp),
-      db
-        .from("chargebacks")
-        .select("id", { count: "exact", head: true })
-        .gte("received_at", sinceTimestamp),
-      db
-        .from("api_request_metrics")
-        .select("status_code, duration_ms")
-        .gte("created_at", sinceTimestamp),
-      db
-        .from("compliance_reports")
-        .select("status, generated_at")
-        .gte("created_at", sinceTimestamp),
-      db
-        .from("ml_models")
-        .select("status, updated_at")
-        .order("updated_at", { ascending: false })
-        .limit(1)
+      transactionsQuery,
+      chargebacksQuery,
+      apiMetricsQuery,
+      complianceQuery,
+      modelQuery
     ]);
 
     if (

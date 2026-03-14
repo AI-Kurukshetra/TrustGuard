@@ -715,6 +715,26 @@ Operational request telemetry for KPI reporting and SLO tracking.
 | `metadata` | `jsonb` | extra route context |
 | `created_at` | `timestamptz` | default `now()` |
 
+### integration_api_keys
+
+Merchant-scoped API keys for backend-to-backend ingestion (transactions, device events, and operational APIs).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | primary key |
+| `merchant_id` | `uuid` | fk -> `merchants.id`, not null |
+| `name` | `text` | human-friendly key label |
+| `key_prefix` | `text` | non-sensitive visible prefix |
+| `key_hash` | `text` | sha256 hash of full key (unique) |
+| `role` | `merchant_member_role` | scope level (`viewer`, `analyst`, `admin`) |
+| `active` | `boolean` | default `true` |
+| `last_used_at` | `timestamptz` | updated when key is used |
+| `expires_at` | `timestamptz` | optional expiry |
+| `revoked_at` | `timestamptz` | set on revoke |
+| `created_by` | `uuid` | fk -> `auth.users.id`, nullable |
+| `created_at` | `timestamptz` | default `now()` |
+| `updated_at` | `timestamptz` | default `now()` |
+
 ## Relationship Summary
 
 - `merchants` 1 -> many `users`
@@ -728,6 +748,7 @@ Operational request telemetry for KPI reporting and SLO tracking.
 - `merchants` 1 -> many `alerts`
 - `merchants` 1 -> many `fraud_cases`
 - `merchants` 1 -> many `api_request_metrics`
+- `merchants` 1 -> many `integration_api_keys`
 - `users` 1 -> many `devices`
 - `users` 1 -> many `sessions`
 - `users` 1 -> many `payment_methods`

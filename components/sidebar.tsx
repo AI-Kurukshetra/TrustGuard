@@ -14,7 +14,8 @@ const links: SidebarLink[] = [
   { href: "/transactions", label: "Transactions", meta: "Risk scoring queue" },
   { href: "/cases", label: "Cases", meta: "Analyst workflow" },
   { href: "/rules", label: "Rules", meta: "Policy controls" },
-  { href: "/alerts", label: "Alerts", meta: "Incident stream" }
+  { href: "/alerts", label: "Alerts", meta: "Incident stream" },
+  { href: "/integrations", label: "Integrations", meta: "API keys & setup" }
 ];
 
 export function Sidebar({ pathname, header }: { pathname: string; header?: ReactNode }) {
@@ -60,6 +61,14 @@ export function Sidebar({ pathname, header }: { pathname: string; header?: React
               Payment fraud detection, device fingerprinting, velocity checks, rules, alerts, and analyst tooling.
             </p>
           </div>
+          <form action="/api/auth/logout" method="post">
+            <button
+              type="submit"
+              className="w-full rounded-2xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-left text-sm font-medium text-slate-200 transition hover:border-white/25 hover:bg-white/[0.08]"
+            >
+              Sign out
+            </button>
+          </form>
         </div>
       </div>
     </aside>

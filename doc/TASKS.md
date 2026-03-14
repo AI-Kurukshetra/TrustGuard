@@ -35,3 +35,6 @@
 - [x] 2026-03-14 13:41 Implement KPI instrumentation foundation (`api_request_metrics` migration + metric logger + `/api/reports/kpis` endpoint)
 - [x] 2026-03-14 13:41 Push KPI migration to Supabase and validate live KPI endpoint response with authenticated merchant user
 - [x] 2026-03-14 13:49 Add dashboard KPI pulse widget wired to server-side KPI summary data
+- [x] 2026-03-14 13:58 Add full seed coverage for remaining Supabase tables and verify seeded row counts remotely
+- [x] 2026-03-14 14:09 Implement end-to-end operator auth flow (signup/login/logout), protected dashboard routing, and tenant-scoped dashboard reads
+- [x] 2026-03-14 14:23 Add API key-based integration flow (schema, auth support, key management APIs/UI) and align local+Vercel to one live Supabase project

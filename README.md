@@ -46,6 +46,22 @@ corepack pnpm dev
 
 App default URL: `http://localhost:3000`
 
+## Product Usage Flow
+
+1. Open `http://localhost:3000/signup` and create your operator account + merchant workspace.
+2. You are signed in automatically and redirected to the dashboard (`/`).
+3. Use the sidebar to navigate:
+   - `Command Center` for live KPIs and queue
+   - `Transactions` for scored payment review
+   - `Cases` for fraud investigations
+   - `Rules` for policy controls
+   - `Alerts` for incident stream
+   - `Integrations` for API keys and backend wiring
+4. Create an API key in `Integrations` and use it from your backend with `x-api-key` + `x-merchant-id`.
+5. Use `Sign out` in the sidebar to end the session.
+
+For returning users: `http://localhost:3000/login`.
+
 ## Useful Commands
 
 ```bash
@@ -77,6 +93,11 @@ corepack pnpm exec vercel --version
 - `POST /api/graph/materialize`
 - `POST /api/payment-methods/validate`
 - `GET /api/auth/me`
+- `POST /api/auth/signup`
+- `POST /api/auth/login`
+- `GET|POST /api/auth/logout`
+- `GET/POST /api/integrations/keys`
+- `DELETE /api/integrations/keys/:id`
 
 Detailed contracts: `doc/API.md`
 
@@ -89,8 +110,37 @@ Supabase migrations are in:
 - `supabase/migrations/20260314114000_add_entity_lists.sql`
 - `supabase/migrations/20260314120000_add_analytics_and_graph.sql`
 - `supabase/migrations/20260314124000_add_patterns_geo_behavior_entities.sql`
+- `supabase/migrations/20260314133000_add_api_request_metrics.sql`
+- `supabase/migrations/20260314143000_seed_remaining_tables.sql`
+- `supabase/migrations/20260314151000_add_integration_api_keys.sql`
 
 Canonical schema reference: `doc/SCHEMA.md`
+
+## One Live Database for Local + Vercel
+
+Use the same Supabase project credentials in both environments:
+
+Local `.env`:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Vercel project env vars: set the exact same three values for Production/Preview/Development.
+
+Example:
+
+```bash
+corepack pnpm exec vercel env add NEXT_PUBLIC_SUPABASE_URL
+corepack pnpm exec vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
+corepack pnpm exec vercel env add SUPABASE_SERVICE_ROLE_KEY
+```
+
+Notes:
+
+- Data is shared live because both deployments point to one Supabase DB.
+- Browser cookies are domain-specific (`localhost` vs Vercel domain), so login sessions are separate per domain.
+- API keys from `Integrations` work from any environment as long as they target the same backend and merchant.
 
 ## Project Docs
 

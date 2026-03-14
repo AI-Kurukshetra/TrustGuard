@@ -1,11 +1,13 @@
 import { PageShell } from "@/components/page-shell";
 import { SectionCard } from "@/components/section-card";
+import { getRequestAuthContext } from "@/lib/auth/request-context";
 import { getRiskRulesData } from "@/lib/trustguard-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function RulesPage() {
-  const riskRules = await getRiskRulesData();
+  const authContext = getRequestAuthContext();
+  const riskRules = await getRiskRulesData(authContext.merchantId ?? undefined, authContext.client ?? undefined);
 
   return (
     <PageShell

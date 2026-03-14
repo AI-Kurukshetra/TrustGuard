@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ACCESS_TOKEN_COOKIE, MERCHANT_ID_COOKIE } from "@/lib/auth/session";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { createSupabaseRequestClient } from "@/lib/supabase/request";
 
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ user: null, memberships: [], source: "mock" });
   }
 
-  const token = getBearerToken(request);
+  const token = getBearerToken(request) ?? request.cookies.get(ACCESS_TOKEN_COOKIE)?.value ?? null;
   if (!token) {
     return NextResponse.json({ error: "Missing bearer token" }, { status: 401 });
   }
@@ -42,11 +43,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: membershipsError.message }, { status: 400 });
   }
 
+  const cookieMerchantId = request.cookies.get(MERCHANT_ID_COOKIE)?.value ?? null;
+
   return NextResponse.json({
     user: {
       id: user.id,
       email: user.email ?? null
     },
-    memberships: memberships ?? []
+    memberships: memberships ?? [],
+    active_merchant_id: cookieMerchantId
   });
 }

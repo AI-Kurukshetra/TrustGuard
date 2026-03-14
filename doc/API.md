@@ -7,6 +7,16 @@ Protected API routes require:
 - `Authorization: Bearer <supabase_jwt>`
 - Merchant scope via `x-merchant-id` header or `merchant_id` payload
 
+For browser sessions created via `/api/auth/login` or `/api/auth/signup`, protected routes also accept:
+
+- `tg_access_token` cookie (auth token)
+- `tg_merchant_id` cookie (merchant scope)
+
+Server-to-server integrations may authenticate with:
+
+- `x-api-key: <integration_api_key>`
+- `x-merchant-id: <merchant_uuid>` (optional if key is merchant-bound, but recommended)
+
 Role enforcement:
 
 - `viewer`: read endpoints
@@ -225,6 +235,69 @@ Refreshes user-level `risk_score` by aggregating recent transaction risk scores.
 ### GET `/api/auth/me`
 
 Returns authenticated user identity and active merchant memberships from Supabase auth token.
+
+### POST `/api/auth/signup`
+
+Request body:
+
+```json
+{
+  "email": "ops@acme.com",
+  "password": "strong-password",
+  "merchant_name": "Acme Payments"
+}
+```
+
+Behavior:
+
+- creates Supabase auth user
+- provisions a new merchant tenant
+- assigns the user as `admin` in `merchant_members`
+- auto-signs in and sets auth cookies
+
+### POST `/api/auth/login`
+
+Request body:
+
+```json
+{
+  "email": "ops@acme.com",
+  "password": "strong-password"
+}
+```
+
+Optional: `merchant_id` to target a specific membership when user belongs to multiple merchants.
+
+Response includes selected `merchant_id`, role, and sets auth cookies.
+
+### GET/POST `/api/auth/logout`
+
+Clears auth cookies and redirects to `/login`.
+
+### GET/POST `/api/integrations/keys`
+
+Role: `admin`
+
+- `GET` lists merchant API key metadata (masked key value only; full key is never returned again).
+- `POST` creates a new API key.
+
+Create request body:
+
+```json
+{
+  "name": "Primary backend",
+  "role": "analyst",
+  "expires_in_days": 90
+}
+```
+
+Create response includes one-time `api_key` plaintext plus key metadata.
+
+### DELETE `/api/integrations/keys/{id}`
+
+Role: `admin`
+
+Revokes an API key by setting `active=false` and `revoked_at=now()`.
 
 ### GET/POST `/api/rules`
 

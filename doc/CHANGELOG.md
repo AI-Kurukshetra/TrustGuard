@@ -37,3 +37,17 @@
 - Added `/api/reports/kpis` to compute KPI summaries (precision/recall estimates, latency, uptime, revenue protected, compliance success, model drift signal) from live merchant data.
 - Updated API and schema docs (`doc/API.md`, `doc/SCHEMA.md`) to include KPI endpoint and `api_request_metrics` table.
 - Added dashboard KPI pulse UI on `app/(dashboard)/page.tsx` and new `getDashboardKpiSummaryData()` server data path in `lib/trustguard-data.ts` to surface business metrics in the main command center.
+- Added migration `20260314143000_seed_remaining_tables.sql` to seed previously uncovered tables (`model_evaluations`, `entity_lists`, `daily_risk_metrics`, `entity_connections`, `geographical_locations`, `behavioral_patterns`, `fraud_patterns`, `api_request_metrics`) with deterministic demo data.
+- Updated fraud-pattern seed logic to resolve `related_connection_id` dynamically from natural connection keys, avoiding hardcoded-ID FK breakage when connection rows already exist.
+- Pushed the new seed migration to the linked Supabase project and verified row counts across all schema tables.
+- Added auth API routes for operator lifecycle: `POST /api/auth/signup`, `POST /api/auth/login`, and `GET|POST /api/auth/logout`.
+- Added auth UI routes (`/signup`, `/login`) with a first-run operator onboarding form that creates a tenant and admin membership.
+- Added `app/(dashboard)/layout.tsx` guard to enforce authenticated merchant membership before rendering dashboard pages.
+- Added cookie-backed auth context utilities and extended API auth extraction to support cookie-based token + merchant lookup in addition to explicit headers.
+- Updated dashboard data loading to pass request-scoped Supabase client + merchant context, ensuring tenant-scoped reads for signed-in operators.
+- Added in-product “How operators use TrustGuard” flow section and a sidebar sign-out control.
+- Added migration `20260314151000_add_integration_api_keys.sql` with indexes, RLS policies, and trigger-backed timestamps for merchant-scoped API key management.
+- Extended `requireMerchantAuth` to accept `x-api-key`/`Authorization: ApiKey` credentials, validate hashed keys, enforce role scope, and auto-derive merchant context.
+- Added integration key API routes: `GET/POST /api/integrations/keys` and `DELETE /api/integrations/keys/{id}` for create/list/revoke workflows.
+- Added dashboard integration setup surface at `/integrations` with API key manager UI and ready-to-run transaction scoring curl example.
+- Updated README/API/schema docs to include API-key integration flow and one-live-Supabase configuration across local and Vercel environments.

@@ -20,3 +20,12 @@
 - KPI endpoint should return explicit assumptions when precision/recall or drift are estimated from proxy signals, rather than implying label-quality certainty.
 - Start GTM/pricing execution artifacts as first-class repo docs (`PRICING`, `GTM`, `DIFFERENTIATION_BACKLOG`) so commercial decisions evolve alongside product implementation.
 - Surface KPI telemetry directly on the primary dashboard view so risk operators and business stakeholders see the same operational health signals without switching contexts.
+- Keep seed data split into a follow-up migration for newly added tables and make inserts idempotent (`on conflict`) so production-like demo environments can be reprovisioned safely.
+- For seeded foreign keys that may be upserted under natural-key uniqueness (`entity_connections`), resolve dependent IDs by query at insert time instead of hardcoding UUID references.
+- Implement operator authentication as first-party app routes (`/signup`, `/login`) backed by Supabase Auth and server-set httpOnly cookies to make the MVP usable without manual bearer-token handling in browser flows.
+- Enforce dashboard access in a route-group server layout (`app/(dashboard)/layout.tsx`) by validating both access token and active `merchant_members` record for the selected tenant.
+- During signup, auto-provision a merchant tenant and admin membership so first-time users can immediately access a working workspace.
+- Keep API auth backward-compatible: accept explicit `Authorization` + `x-merchant-id` headers for integrations, and fall back to cookie session context for app-origin requests.
+- Use hashed, merchant-scoped API keys (`integration_api_keys`) for backend integration so merchants can connect transaction traffic without reusing operator login tokens.
+- Allow `requireMerchantAuth` to authenticate either operator JWT/cookies or API keys, but keep API-key management actions restricted to interactive admin sessions (`userId` required).
+- Keep local and Vercel pointed to one Supabase project for live shared data parity; treat browser session cookies as domain-specific while API-key traffic remains environment-agnostic.
