@@ -38,3 +38,4 @@
 - [x] 2026-03-14 13:58 Add full seed coverage for remaining Supabase tables and verify seeded row counts remotely
 - [x] 2026-03-14 14:09 Implement end-to-end operator auth flow (signup/login/logout), protected dashboard routing, and tenant-scoped dashboard reads
 - [x] 2026-03-14 14:23 Add API key-based integration flow (schema, auth support, key management APIs/UI) and align local+Vercel to one live Supabase project
+- [x] 2026-03-14 14:36 Add dashboard action controls for cases/rules/alerts and fix logout redirect method issue causing `/login` HTTP 405

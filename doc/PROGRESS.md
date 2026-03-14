@@ -31,3 +31,4 @@
 [2026-03-14 13:58] codex — Added migration `20260314143000_seed_remaining_tables.sql`, fixed FK-safe fraud-pattern seeding via dynamic connection lookup, pushed migration, and verified non-zero row counts across all schema tables.
 [2026-03-14 14:09] codex — Added operator signup/login/logout endpoints, auth pages, dashboard auth guard, cookie-backed merchant context, and tenant-scoped dashboard data loading for authenticated sessions.
 [2026-03-14 14:23] codex — Added `integration_api_keys` migration + push, enabled API-key auth in `requireMerchantAuth`, implemented integration key CRUD endpoints and dashboard setup UI, and documented one-live-Supabase setup for local and Vercel.
+[2026-03-14 14:36] codex — Fixed logout redirect from 307 to 303 (prevents POST-to-/login 405 on Vercel), added alert acknowledge API/UI action, and wired interactive case/rule action controls in dashboard pages.

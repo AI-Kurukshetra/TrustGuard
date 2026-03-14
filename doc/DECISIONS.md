@@ -29,3 +29,5 @@
 - Use hashed, merchant-scoped API keys (`integration_api_keys`) for backend integration so merchants can connect transaction traffic without reusing operator login tokens.
 - Allow `requireMerchantAuth` to authenticate either operator JWT/cookies or API keys, but keep API-key management actions restricted to interactive admin sessions (`userId` required).
 - Keep local and Vercel pointed to one Supabase project for live shared data parity; treat browser session cookies as domain-specific while API-key traffic remains environment-agnostic.
+- For sign-out endpoints that redirect to page routes, use HTTP `303 See Other` instead of `307` to force a follow-up GET and avoid method replay errors on route pages (`/login` 405).
+- Surface existing backend operations through explicit dashboard action controls so analysts can execute case/rule/alert workflows without leaving the UI.

@@ -51,3 +51,9 @@
 - Added integration key API routes: `GET/POST /api/integrations/keys` and `DELETE /api/integrations/keys/{id}` for create/list/revoke workflows.
 - Added dashboard integration setup surface at `/integrations` with API key manager UI and ready-to-run transaction scoring curl example.
 - Updated README/API/schema docs to include API-key integration flow and one-live-Supabase configuration across local and Vercel environments.
+- Fixed logout redirect semantics by returning HTTP `303` from `/api/auth/logout`, preventing method-preserving redirects that caused `/login` HTTP 405 after sign-out.
+- Added `PATCH /api/alerts/{id}` to acknowledge alerts and wired acknowledgment action controls into the Alerts dashboard page.
+- Added interactive analyst/admin dashboard actions:
+  - Cases: status transitions (`open`, `in_review`, `escalated`, `resolved`)
+  - Rules: create, enable/disable, and delete
+  - Alerts: acknowledge

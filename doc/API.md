@@ -102,6 +102,15 @@ Response:
 }
 ```
 
+### PATCH `/api/alerts/{id}`
+
+Role: `analyst`
+
+Acknowledges an alert by setting:
+
+- `acknowledged_at = now()`
+- `acknowledged_by = current user` (or `null` for API-key auth)
+
 ### GET `/api/users/{id}/risk-profile`
 
 Headers:

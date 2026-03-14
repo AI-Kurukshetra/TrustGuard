@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { clearAuthCookies } from "@/lib/auth/session";
 
 function buildRedirect(request: NextRequest) {
-  const response = NextResponse.redirect(new URL("/login", request.url));
+  const response = NextResponse.redirect(new URL("/login", request.url), { status: 303 });
   clearAuthCookies(response);
   return response;
 }

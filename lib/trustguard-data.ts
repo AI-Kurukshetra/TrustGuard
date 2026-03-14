@@ -391,6 +391,9 @@ function adjustScoreForEntityLists(input: {
 }
 
 function normalizeCaseStatus(status: string): FraudCase["status"] {
+  if (status === "in_review") {
+    return "in_review";
+  }
   if (status === "escalated") {
     return "escalated";
   }
@@ -496,7 +499,7 @@ async function fetchTransactions(client: SupabaseClientLike, merchantId?: string
 async function fetchAlerts(client: SupabaseClientLike, merchantId?: string) {
   let query = client
     .from("alerts")
-    .select("id, alert_type, severity, entity_id, created_at, summary")
+    .select("id, alert_type, severity, entity_id, created_at, summary, acknowledged_at")
     .order("created_at", { ascending: false });
 
   if (merchantId) {
@@ -516,7 +519,8 @@ async function fetchAlerts(client: SupabaseClientLike, merchantId?: string) {
       severity: row.severity,
       entityId: row.entity_id,
       createdAt: row.created_at,
-      summary: row.summary ?? ""
+      summary: row.summary ?? "",
+      acknowledgedAt: row.acknowledged_at ?? null
     })
   );
 }

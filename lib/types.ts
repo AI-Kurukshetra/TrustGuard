@@ -1,6 +1,6 @@
 export type TransactionStatus = "approved" | "review" | "blocked";
 export type AlertSeverity = "low" | "medium" | "high" | "critical";
-export type CaseStatus = "open" | "escalated" | "resolved";
+export type CaseStatus = "open" | "in_review" | "escalated" | "resolved";
 export type RuleAction = "approve" | "review" | "block";
 
 export interface User {
@@ -53,6 +53,7 @@ export interface Alert {
   entityId: string;
   createdAt: string;
   summary: string;
+  acknowledgedAt?: string | null;
 }
 
 export interface RiskRule {

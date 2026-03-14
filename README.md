@@ -53,9 +53,9 @@ App default URL: `http://localhost:3000`
 3. Use the sidebar to navigate:
    - `Command Center` for live KPIs and queue
    - `Transactions` for scored payment review
-   - `Cases` for fraud investigations
-   - `Rules` for policy controls
-   - `Alerts` for incident stream
+   - `Cases` for fraud investigations and case status actions
+   - `Rules` for policy controls (create/enable/disable/delete)
+   - `Alerts` for incident stream and acknowledgment actions
    - `Integrations` for API keys and backend wiring
 4. Create an API key in `Integrations` and use it from your backend with `x-api-key` + `x-merchant-id`.
 5. Use `Sign out` in the sidebar to end the session.
