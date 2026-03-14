@@ -16,3 +16,6 @@
 - Keep smoke test requests idempotent by injecting per-run unique suffixes for routes with unique-key constraints.
 - Install the Vercel CLI as a local dev dependency (`pnpm exec vercel`) so deployment commands are version-pinned per repository rather than relying on a global install.
 - Keep onboarding instructions in a root `README.md` that points to `/doc` files for deeper specifications, so setup and operational context stay easy to discover for new contributors.
+- Track API SLO and KPI inputs in a dedicated `api_request_metrics` table (tenant-scoped, RLS-protected) to support operational reporting without coupling to app logs.
+- KPI endpoint should return explicit assumptions when precision/recall or drift are estimated from proxy signals, rather than implying label-quality certainty.
+- Start GTM/pricing execution artifacts as first-class repo docs (`PRICING`, `GTM`, `DIFFERENTIATION_BACKLOG`) so commercial decisions evolve alongside product implementation.

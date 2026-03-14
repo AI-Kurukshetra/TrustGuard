@@ -699,6 +699,22 @@ Graph foundation table that materializes risk relationships between entities.
 | `created_at` | `timestamptz` | default `now()` |
 | `updated_at` | `timestamptz` | default `now()` |
 
+### api_request_metrics
+
+Operational request telemetry for KPI reporting and SLO tracking.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | primary key |
+| `merchant_id` | `uuid` | fk -> `merchants.id`, not null |
+| `route` | `text` | API route identifier |
+| `method` | `text` | HTTP method |
+| `status_code` | `integer` | 100-599 |
+| `duration_ms` | `integer` | request latency in milliseconds |
+| `error_code` | `text` | optional normalized failure code |
+| `metadata` | `jsonb` | extra route context |
+| `created_at` | `timestamptz` | default `now()` |
+
 ## Relationship Summary
 
 - `merchants` 1 -> many `users`
@@ -711,6 +727,7 @@ Graph foundation table that materializes risk relationships between entities.
 - `merchants` 1 -> many `risk_rules`
 - `merchants` 1 -> many `alerts`
 - `merchants` 1 -> many `fraud_cases`
+- `merchants` 1 -> many `api_request_metrics`
 - `users` 1 -> many `devices`
 - `users` 1 -> many `sessions`
 - `users` 1 -> many `payment_methods`

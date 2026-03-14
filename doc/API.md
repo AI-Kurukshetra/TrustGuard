@@ -184,6 +184,20 @@ Headers:
 
 Generates and stores a compliance report payload in `compliance_reports`.
 
+### GET `/api/reports/kpis`
+
+Headers:
+
+- `x-merchant-id: <merchant_uuid>`
+
+Returns KPI summary for a lookback window (`?days=30` default), including:
+
+- estimated fraud precision/recall and false-positive/false-negative rates
+- transaction scoring latency (`avg`, `p95`) from `api_request_metrics`
+- API uptime percentage from recorded request statuses
+- revenue protected estimate from blocked transaction amounts
+- compliance report generation success rate
+
 ### POST `/api/graph/materialize`
 
 Headers:

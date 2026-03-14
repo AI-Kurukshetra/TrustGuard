@@ -1,17 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireMerchantAuth } from "@/lib/api-auth";
+import { recordApiRequestMetric } from "@/lib/api-metrics";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  const startedAt = Date.now();
   const body = (await request.json()) as Record<string, unknown>;
   const auth = await requireMerchantAuth(request, body, "admin");
   if (!auth.ok) {
     return auth.response;
   }
 
+  const track = async (statusCode: number, errorCode?: string) =>
+    recordApiRequestMetric({
+      merchantId: auth.context.merchantId,
+      route: "/api/reports/generate",
+      method: "POST",
+      statusCode,
+      durationMs: Date.now() - startedAt,
+      errorCode,
+      client: auth.context.supabase ?? null
+    });
+
   if (!hasSupabaseEnv() || !auth.context.supabase) {
+    await track(400, "supabase_not_configured");
     return NextResponse.json({ error: "Supabase not configured" }, { status: 400 });
   }
 
@@ -29,6 +43,7 @@ export async function POST(request: NextRequest) {
     .lte("occurred_at", `${periodEnd}T23:59:59.999Z`);
 
   if (txError) {
+    await track(400, "transactions_query_failed");
     return NextResponse.json({ error: txError.message }, { status: 400 });
   }
 
@@ -68,8 +83,10 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) {
+    await track(400, "report_insert_failed");
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+  await track(200);
 
   return NextResponse.json({ data, payload });
 }

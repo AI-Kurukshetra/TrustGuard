@@ -31,3 +31,8 @@
 - Updated `scripts/smoke-test.sh` to generate per-run unique values for insert-heavy endpoints so repeated local smoke runs remain idempotent.
 - Added `vercel` CLI as a project dev dependency using `pnpm` and generated a `pnpm-lock.yaml` for reproducible package resolution.
 - Added a root `README.md` with local setup, required environment variables, pnpm/vercel commands, API route summary, migration references, and links to `/doc` operating files.
+- Added strategic operating docs: `doc/PRICING.md`, `doc/GTM.md`, and `doc/DIFFERENTIATION_BACKLOG.md`.
+- Added migration `20260314133000_add_api_request_metrics.sql` with RLS policies for tenant-scoped API telemetry.
+- Added `lib/api-metrics.ts` and instrumented key endpoints (`transactions/analyze`, `alerts`, `analytics/summary`, `reports/generate`, `users/[id]/risk-profile`) for latency and status tracking.
+- Added `/api/reports/kpis` to compute KPI summaries (precision/recall estimates, latency, uptime, revenue protected, compliance success, model drift signal) from live merchant data.
+- Updated API and schema docs (`doc/API.md`, `doc/SCHEMA.md`) to include KPI endpoint and `api_request_metrics` table.

@@ -31,3 +31,6 @@
 - [x] 2026-03-14 13:26 Push pending Supabase migrations to remote project and verify previously failing endpoint groups recover
 - [x] 2026-03-14 13:26 Fix `/api/graph/materialize` duplicate upsert conflict by de-duplicating connection rows before batch upsert
 - [x] 2026-03-14 13:28 Make smoke API script idempotent across repeated runs and verify full `npm run test:checklist` passes with Supabase auth
+- [x] 2026-03-14 13:41 Add business execution docs for pricing, GTM, and differentiation backlog
+- [x] 2026-03-14 13:41 Implement KPI instrumentation foundation (`api_request_metrics` migration + metric logger + `/api/reports/kpis` endpoint)
+- [x] 2026-03-14 13:41 Push KPI migration to Supabase and validate live KPI endpoint response with authenticated merchant user

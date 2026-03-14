@@ -26,3 +26,4 @@
 [2026-03-14 12:40] codex — Executed end-to-end local/API test matrix with real Supabase auth, confirmed core routes work, and isolated missing-table failures to unapplied later migrations in the target Supabase project.
 [2026-03-14 13:26] codex — Linked Supabase project, pushed pending migrations, fixed graph materialization upsert conflicts, and re-ran targeted endpoint checks to 0 failures.
 [2026-03-14 13:28] codex — Updated smoke script for idempotent inserts and validated full checklist (lint, typecheck, unit tests, smoke API) passes against local server with Supabase-backed auth.
+[2026-03-14 13:41] codex — Added pricing/GTM/differentiation docs, implemented API KPI instrumentation (`api_request_metrics` + `/api/reports/kpis`), and validated live authenticated KPI responses after migration push.
