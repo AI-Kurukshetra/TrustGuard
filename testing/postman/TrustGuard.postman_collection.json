@@ -1,0 +1,146 @@
+{
+  "info": {
+    "name": "TrustGuard API",
+    "_postman_id": "d95f7a4e-6031-4b06-b41b-8fb2f9ed1c98",
+    "description": "Core TrustGuard API smoke collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "token", "value": "" },
+    { "key": "merchantId", "value": "" },
+    { "key": "userId", "value": "10000000-0000-0000-0000-000000000002" }
+  ],
+  "item": [
+    {
+      "name": "Auth / Me",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "x-merchant-id", "value": "{{merchantId}}" }
+        ],
+        "url": "{{baseUrl}}/api/auth/me"
+      }
+    },
+    {
+      "name": "Transactions / Analyze",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "x-merchant-id", "value": "{{merchantId}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"amount\":1622.11,\"currency\":\"USD\",\"user_id\":\"{{userId}}\",\"country_code\":\"US\"}"
+        },
+        "url": "{{baseUrl}}/api/transactions/analyze"
+      }
+    },
+    {
+      "name": "Users / Risk Profile",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "x-merchant-id", "value": "{{merchantId}}" }
+        ],
+        "url": "{{baseUrl}}/api/users/{{userId}}/risk-profile"
+      }
+    },
+    {
+      "name": "Rules / List",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "x-merchant-id", "value": "{{merchantId}}" }
+        ],
+        "url": "{{baseUrl}}/api/rules"
+      }
+    },
+    {
+      "name": "Alerts / List",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "x-merchant-id", "value": "{{merchantId}}" }
+        ],
+        "url": "{{baseUrl}}/api/alerts"
+      }
+    },
+    {
+      "name": "Webhooks / List",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "x-merchant-id", "value": "{{merchantId}}" }
+        ],
+        "url": "{{baseUrl}}/api/webhooks"
+      }
+    },
+    {
+      "name": "Compliance / Reports",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "x-merchant-id", "value": "{{merchantId}}" }
+        ],
+        "url": "{{baseUrl}}/api/compliance/reports"
+      }
+    },
+    {
+      "name": "Geo Locations / Create",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "x-merchant-id", "value": "{{merchantId}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"country_code\":\"US\",\"region\":\"CA\",\"city\":\"San Francisco\",\"timezone\":\"America/Los_Angeles\",\"risk_level\":\"low\"}"
+        },
+        "url": "{{baseUrl}}/api/geographical-locations"
+      }
+    },
+    {
+      "name": "Behavioral Patterns / Create",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "x-merchant-id", "value": "{{merchantId}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"user_id\":\"{{userId}}\",\"pattern_type\":\"typing_cadence\",\"score\":74.2,\"status\":\"observed\",\"pattern_payload\":{\"keystroke_variance\":0.19}}"
+        },
+        "url": "{{baseUrl}}/api/behavioral-patterns"
+      }
+    },
+    {
+      "name": "Fraud Patterns / Create",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "x-merchant-id", "value": "{{merchantId}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pattern_name\":\"Rapid Card Testing Cluster\",\"category\":\"payment_fraud\",\"severity\":\"high\",\"detection_type\":\"rule\",\"confidence\":82.5}"
+        },
+        "url": "{{baseUrl}}/api/fraud-patterns"
+      }
+    }
+  ]
+}
