@@ -1,4 +1,6 @@
 import { ReactNode } from "react";
+import { BrandLogo } from "@/components/brand-logo";
+import { MobileSidebarDrawer } from "@/components/mobile-sidebar-drawer";
 import { Sidebar } from "@/components/sidebar";
 
 export function PageShell({
@@ -12,22 +14,24 @@ export function PageShell({
   subtitle: string;
   children: ReactNode;
 }) {
+  const sidebarHeader = (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+      <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Coverage</div>
+      <div className="mt-2 text-sm text-white">Web transactions</div>
+      <div className="text-sm text-slate-400">Fintech and e-commerce workflows</div>
+    </div>
+  );
+
   return (
     <div className="dashboard-grid min-h-screen lg:grid lg:grid-cols-[280px_1fr]">
-      <Sidebar
-        pathname={pathname}
-        header={
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Coverage</div>
-            <div className="mt-2 text-sm text-white">Web transactions</div>
-            <div className="text-sm text-slate-400">Fintech and e-commerce workflows</div>
-          </div>
-        }
-      />
+      <div className="hidden lg:block">
+        <Sidebar pathname={pathname} header={sidebarHeader} />
+      </div>
       <main className="px-5 py-6 md:px-8 md:py-8">
+        <MobileSidebarDrawer pathname={pathname} />
         <header className="mb-8 flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-gradient-to-r from-pulse/15 via-white/[0.04] to-alarm/10 p-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="text-xs uppercase tracking-[0.35em] text-pulse">TrustGuard MVP</div>
+            <BrandLogo variant="compact" className="rounded-xl border border-pulse/25 bg-pulse/10 px-3 py-2" />
             <h1 className="mt-3 text-3xl font-semibold text-white">{title}</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-300">{subtitle}</p>
           </div>

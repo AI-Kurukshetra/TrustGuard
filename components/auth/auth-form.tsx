@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { BrandLogo } from "@/components/brand-logo";
 
 type AuthMode = "login" | "signup";
 
@@ -53,9 +54,11 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   return (
     <div className="mx-auto w-full max-w-md rounded-3xl border border-white/10 bg-slate-950/60 p-8 shadow-panel backdrop-blur">
-      <div className="inline-flex items-center rounded-full border border-pulse/35 bg-pulse/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-pulse">
-        TrustGuard
-      </div>
+      <BrandLogo
+        variant="compact"
+        className="rounded-xl border border-pulse/35 bg-pulse/10 px-3 py-2"
+        markClassName="h-7 w-7 rounded-md"
+      />
       <h1 className="mt-4 text-3xl font-semibold text-white">
         {isSignup ? "Create your fraud ops workspace" : "Sign in to your control plane"}
       </h1>

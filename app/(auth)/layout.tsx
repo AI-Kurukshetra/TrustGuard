@@ -1,3 +1,5 @@
+import { BrandLogo } from "@/components/brand-logo";
+
 export default function AuthLayout({
   children
 }: Readonly<{
@@ -7,6 +9,11 @@ export default function AuthLayout({
     <main className="mx-auto flex min-h-screen w-full max-w-6xl items-center px-5 py-10 md:px-8">
       <div className="grid w-full gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
         <section className="space-y-5">
+          <BrandLogo
+            variant="full"
+            className="rounded-2xl border border-pulse/25 bg-pulse/10 px-3 py-2"
+            markClassName="h-8 w-8 rounded-lg"
+          />
           <div className="text-xs uppercase tracking-[0.3em] text-slate-400">Fraud Detection & Prevention</div>
           <h2 className="text-4xl font-semibold leading-tight text-white md:text-5xl">
             Protect payments in real time with AI scoring and analyst workflows.
