@@ -31,6 +31,7 @@ Role enforcement:
 - `viewer`: read endpoints
 - `analyst`: investigation and operational write endpoints
 - `admin`: policy/config endpoints
+- plan entitlements can additionally restrict advanced endpoints (for example federated learning, cross-merchant intelligence, quantum key rotation)
 
 ## JavaScript Agent Wrapper
 
@@ -631,3 +632,31 @@ Supports:
 
 - run AutoML candidate selection from historical transactions
 - persist best model candidate and `automl_runs` output
+
+### GET `/api/billing/entitlements`
+
+Supports:
+
+- read merchant plan tier
+- read feature entitlements
+- read monthly usage vs quota limits
+- return upgrade signals when usage approaches limits
+
+### GET `/api/billing/usage`
+
+Supports:
+
+- read monthly usage events
+- return daily usage rollups for billing reconciliation
+
+Query params:
+
+- `year` (optional)
+- `month` (optional, 1-12)
+
+### GET `/api/reports/scorecard`
+
+Supports:
+
+- combined business scorecard view: plan + usage + KPI summary + operational workload
+- intended for customer-facing reporting/export use cases

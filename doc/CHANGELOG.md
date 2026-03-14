@@ -108,3 +108,12 @@
 - Updated `doc/ROADMAP.md` to mark all 20 core and 12 advanced features as complete (MVP) and replaced remaining-scope plan with post-completion hardening roadmap phases.
 - Simplified analyst operations UX for new users: added guided rule templates and examples in `components/rules/rules-manager.tsx`, alert stream summaries/filters and action guidance in `components/alerts/alert-manager.tsx`, and clearer case queue controls/recommendations in `components/cases/case-manager.tsx`; updated page copy in dashboard Rules/Alerts/Cases pages.
 - Simplified `app/(dashboard)/page.tsx`: removed redundant instructional block, introduced focus-mode priority cards, reduced KPI complexity with expandable details, replaced static analyst workload text with live computed counts, and shortened transaction/alert queue previews with action-first labels and view-all links.
+- Added migration `20260314173000_add_billing_usage_and_entitlements.sql` introducing `merchant_usage_events` and `merchant_quota_overrides` with tenant RLS policies.
+- Added `lib/billing.ts` with plan-tier definitions (`starter`, `growth`, `enterprise`), monthly usage aggregation, quota checks, feature access checks, and usage event recording helpers.
+- Updated transaction scoring API (`POST /api/transactions/analyze`) to enforce monthly transaction/API quotas and return billing context when limits are exceeded.
+- Updated API metric logging (`lib/api-metrics.ts`) to also meter `api_call` usage events.
+- Added plan-gating for advanced endpoints across `/api/advanced/*` with feature restrictions for advanced suite, federated learning, cross-merchant intelligence, and quantum crypto.
+- Added billing and scorecard endpoints: `GET /api/billing/entitlements`, `GET /api/billing/usage`, and `GET /api/reports/scorecard`.
+- Added dashboard scorecard page at `app/(dashboard)/scorecard/page.tsx` and sidebar navigation link for plan usage + KPI visibility.
+- Added unit tests `tests/billing.test.ts` for billing plan definitions and helper behavior.
+- Updated API/schema/pricing docs (`doc/API.md`, `doc/SCHEMA.md`, `doc/PRICING.md`, `README.md`) for billing/entitlement and scorecard additions.

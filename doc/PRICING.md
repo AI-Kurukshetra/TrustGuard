@@ -48,3 +48,17 @@
 1. Phase 1: track transaction and API usage metrics per merchant.
 2. Phase 2: enforce plan entitlements and quota alerts.
 3. Phase 3: add billing integration and invoicing reconciliation.
+
+## Current Implementation Status (2026-03-14)
+
+- Completed:
+  - plan-tier entitlements and feature gates (`starter`, `growth`, `enterprise`)
+  - usage metering events (`transaction_scored`, `api_call`, `alert_generated`)
+  - monthly quota checks on transaction scoring
+  - entitlement and usage APIs (`/api/billing/entitlements`, `/api/billing/usage`)
+  - customer-facing scorecard API + dashboard page (`/api/reports/scorecard`, `/scorecard`)
+
+- Remaining:
+  - external billing provider integration
+  - invoicing/reconciliation workflows
+  - automated overage billing and notifications

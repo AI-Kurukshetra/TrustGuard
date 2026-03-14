@@ -779,6 +779,37 @@ Merchant-scoped API keys for backend-to-backend ingestion (transactions, device 
 | `created_at` | `timestamptz` | default `now()` |
 | `updated_at` | `timestamptz` | default `now()` |
 
+### merchant_usage_events
+
+Usage metering events for billing and quota enforcement.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | primary key |
+| `merchant_id` | `uuid` | fk -> `merchants.id` |
+| `event_type` | `text` | `transaction_scored`, `api_call`, `alert_generated`, etc. |
+| `quantity` | `integer` | default `1`, must be positive |
+| `unit` | `text` | default `count` |
+| `event_at` | `timestamptz` | usage timestamp |
+| `metadata` | `jsonb` | route/action context |
+| `created_at` | `timestamptz` | default `now()` |
+
+### merchant_quota_overrides
+
+Per-merchant override controls for plan limits and feature-flag entitlements.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | primary key |
+| `merchant_id` | `uuid` | fk -> `merchants.id`, unique |
+| `monthly_transaction_limit` | `integer` | nullable override |
+| `monthly_api_call_limit` | `integer` | nullable override |
+| `feature_flags` | `jsonb` | override feature switches |
+| `notes` | `text` | operator notes |
+| `created_by` | `uuid` | fk -> `auth.users.id`, nullable |
+| `created_at` | `timestamptz` | default `now()` |
+| `updated_at` | `timestamptz` | default `now()` |
+
 ### graph_risk_findings
 
 Persisted graph-analysis findings for suspicious connected clusters.
@@ -884,6 +915,8 @@ The advanced feature rollout is persisted in these tables:
 - `merchants` 1 -> many `integration_api_keys`
 - `merchants` 1 -> many `model_deployments`
 - `merchants` 1 -> many `compliance_report_schedules`
+- `merchants` 1 -> many `merchant_usage_events`
+- `merchants` 1 -> 0..1 `merchant_quota_overrides`
 - `merchants` 1 -> many `graph_risk_findings`
 - `merchants` 1 -> many `channel_risk_baselines`
 - `merchants` 1 -> many `historical_risk_snapshots`
@@ -914,6 +947,7 @@ The advanced feature rollout is persisted in these tables:
 - check `risk_threshold_block >= risk_threshold_review`
 - check `challenger_traffic_percent between 0 and 100`
 - check `frequency in (daily, weekly, monthly)` for `compliance_report_schedules`
+- check `quantity > 0` for `merchant_usage_events`
 - check `risk_score between 0 and 100` for `graph_risk_findings`, `adversarial_detections`, `multimodal_assessments`, and `explainability_reports`
 - check status values for `contextual_auth_challenges`, `federated_learning_rounds`, `fraud_simulation_runs`, and `automl_runs`
 

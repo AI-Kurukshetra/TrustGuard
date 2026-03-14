@@ -62,3 +62,6 @@
 - [x] 2026-03-14 15:48 Update roadmap tracking board to reflect complete core + advanced feature coverage and post-completion hardening queue
 - [x] 2026-03-14 15:59 Simplify Rules, Alerts, and Cases UX for new users with guided rule templates, queue filters, and clearer next-step guidance
 - [x] 2026-03-14 16:06 Simplify dashboard main page with focus-first cards, dynamic live counts, reduced KPI complexity, and shorter action-oriented queues
+- [x] 2026-03-14 16:40 Add monetization foundations: usage metering schema, plan entitlements, transaction/API quota enforcement, and billing usage APIs
+- [x] 2026-03-14 16:40 Add customer scorecard surfaces (`/api/reports/scorecard` and `/scorecard`) and navigation entry for plan/KPI visibility
+- [x] 2026-03-14 16:40 Gate advanced endpoints by plan entitlement (advanced suite, federated learning, cross-merchant intelligence, quantum crypto)
