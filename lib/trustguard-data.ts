@@ -78,6 +78,9 @@ interface AnalyzeTransactionInput {
   user_in_whitelist?: boolean;
   device_trust_score?: number;
   behavioral_anomaly_score?: number;
+  channel_risk_score?: number;
+  adversarial_attack_score?: number;
+  multimodal_risk_score?: number;
   merchant_id?: string;
   user_id?: string | null;
   session_id?: string | null;
@@ -103,6 +106,7 @@ interface AnalyzeTransactionResult {
   persisted: boolean;
   alert_id?: string;
   case_id?: string;
+  contextual_auth_challenge_id?: string;
 }
 
 interface RegisterDeviceInput {
@@ -271,6 +275,20 @@ function decisionRank(decision: SupportedDecision) {
   return 1;
 }
 
+function resolveDecisionFromThresholds(
+  score: number,
+  reviewThreshold: number,
+  blockThreshold: number
+): SupportedDecision {
+  if (score >= blockThreshold) {
+    return "block";
+  }
+  if (score >= reviewThreshold) {
+    return "review";
+  }
+  return "approve";
+}
+
 function selectFinalDecision(
   heuristicDecision: SupportedDecision,
   matchedRules: ActiveRuleRecord[]
@@ -410,6 +428,9 @@ function calculateHeuristicRisk(params: {
   identityVerified: boolean;
   deviceTrustScore: number;
   behavioralAnomalyScore: number;
+  channelRiskScore?: number;
+  adversarialAttackScore?: number;
+  multimodalRiskScore?: number;
 }) {
   let score = 10;
   const explanation: string[] = [];
@@ -480,6 +501,30 @@ function calculateHeuristicRisk(params: {
   if (!params.identityVerified) {
     score += 14;
     explanation.push("identity_unverified");
+  }
+
+  if ((params.channelRiskScore ?? 0) >= 70) {
+    score += 14;
+    explanation.push("high_risk_channel");
+  } else if ((params.channelRiskScore ?? 0) >= 45) {
+    score += 7;
+    explanation.push("medium_risk_channel");
+  }
+
+  if ((params.adversarialAttackScore ?? 0) >= 70) {
+    score += 28;
+    explanation.push("adversarial_attack_detected");
+  } else if ((params.adversarialAttackScore ?? 0) >= 40) {
+    score += 14;
+    explanation.push("adversarial_attack_suspected");
+  }
+
+  if ((params.multimodalRiskScore ?? 0) >= 70) {
+    score += 20;
+    explanation.push("multimodal_risk_high");
+  } else if ((params.multimodalRiskScore ?? 0) >= 45) {
+    score += 10;
+    explanation.push("multimodal_risk_medium");
   }
 
   return {
@@ -1671,10 +1716,15 @@ export async function analyzeTransaction(
   const userInWhitelist = Boolean(input.user_in_whitelist);
   let deviceTrustScore = Number(input.device_trust_score ?? 0);
   let behavioralAnomalyScore = Number(input.behavioral_anomaly_score ?? 0);
+  let channelRiskScore = Number(input.channel_risk_score ?? 0);
+  let adversarialAttackScore = Number(input.adversarial_attack_score ?? 0);
+  let multimodalRiskScore = Number(input.multimodal_risk_score ?? 0);
   let selectedModelId: string | null = null;
   let selectedModelVariant: "none" | "active" | "challenger" = "none";
   let selectedModelBucket: number | null = null;
   let challengerTrafficPercent = 0;
+  let reviewThreshold = 60;
+  let blockThreshold = 85;
   const currentLatitude = input.latitude !== undefined ? Number(input.latitude) : null;
   const currentLongitude = input.longitude !== undefined ? Number(input.longitude) : null;
 
@@ -1690,10 +1740,13 @@ export async function analyzeTransaction(
     paymentMethodValidated,
     identityVerified,
     deviceTrustScore,
-    behavioralAnomalyScore
+    behavioralAnomalyScore,
+    channelRiskScore,
+    adversarialAttackScore,
+    multimodalRiskScore
   });
   const normalizedScore = baseRisk.normalizedScore;
-  const heuristicDecision = normalizedScore >= 85 ? "block" : normalizedScore >= 60 ? "review" : "approve";
+  const heuristicDecision = resolveDecisionFromThresholds(normalizedScore, reviewThreshold, blockThreshold);
   const baseExplanation = [...baseRisk.explanation];
 
   const buildRuleContext = () => ({
@@ -1711,6 +1764,11 @@ export async function analyzeTransaction(
     user_in_whitelist: userInWhitelist,
     device_trust_score: deviceTrustScore,
     behavioral_anomaly_score: behavioralAnomalyScore,
+    channel_risk_score: channelRiskScore,
+    adversarial_attack_score: adversarialAttackScore,
+    multimodal_risk_score: multimodalRiskScore,
+    review_threshold: reviewThreshold,
+    block_threshold: blockThreshold,
     model_variant: selectedModelVariant,
     challenger_traffic_percent: challengerTrafficPercent
   });
@@ -1743,6 +1801,25 @@ export async function analyzeTransaction(
   }
 
   try {
+    const { data: merchantConfig } = await client
+      .from("merchants")
+      .select("risk_threshold_review, risk_threshold_block")
+      .eq("id", input.merchant_id)
+      .maybeSingle();
+
+    if (merchantConfig?.risk_threshold_review !== null && merchantConfig?.risk_threshold_review !== undefined) {
+      const candidateReviewThreshold = Number(merchantConfig.risk_threshold_review);
+      if (Number.isFinite(candidateReviewThreshold)) {
+        reviewThreshold = Math.max(35, Math.min(90, Math.round(candidateReviewThreshold)));
+      }
+    }
+    if (merchantConfig?.risk_threshold_block !== null && merchantConfig?.risk_threshold_block !== undefined) {
+      const candidateBlockThreshold = Number(merchantConfig.risk_threshold_block);
+      if (Number.isFinite(candidateBlockThreshold)) {
+        blockThreshold = Math.max(reviewThreshold + 5, Math.min(99, Math.round(candidateBlockThreshold)));
+      }
+    }
+
     const { data: entityListRows } = await client
       .from("entity_lists")
       .select("list_type, entity_type, entity_value")
@@ -1954,7 +2031,10 @@ export async function analyzeTransaction(
       paymentMethodValidated,
       identityVerified,
       deviceTrustScore,
-      behavioralAnomalyScore
+      behavioralAnomalyScore,
+      channelRiskScore,
+      adversarialAttackScore,
+      multimodalRiskScore
     });
     const normalizedDerivedScore = derivedRisk.normalizedScore;
     const whitelistMatch = (entityListRows ?? []).some(
@@ -1976,8 +2056,11 @@ export async function analyzeTransaction(
       blacklistMatch
     });
     const finalHeuristicScore = adjustedRisk.normalizedScore;
-    const derivedHeuristicDecision =
-      finalHeuristicScore >= 85 ? "block" : finalHeuristicScore >= 60 ? "review" : "approve";
+    const derivedHeuristicDecision = resolveDecisionFromThresholds(
+      finalHeuristicScore,
+      reviewThreshold,
+      blockThreshold
+    );
     const derivedBaseExplanation = [...adjustedRisk.explanation];
     if (selectedModelVariant === "challenger") {
       derivedBaseExplanation.push("model_variant_challenger");
@@ -1991,6 +2074,10 @@ export async function analyzeTransaction(
     const matchedRuleNames = matchedRules.map((rule) => rule.rule_name);
     const finalDecision = selectFinalDecision(derivedHeuristicDecision, matchedRules);
     const explanation = [...derivedBaseExplanation, ...matchedRuleNames].filter(Boolean);
+    const requiresStepUpAuth = matchedRules.some((rule) => rule.action === "step_up_auth");
+    if (requiresStepUpAuth && !explanation.includes("contextual_auth_required")) {
+      explanation.push("contextual_auth_required");
+    }
     const transactionStatus =
       finalDecision === "block" ? "blocked" : finalDecision === "review" ? "review" : "approved";
 
@@ -2057,12 +2144,18 @@ export async function analyzeTransaction(
         behavioral_anomaly_score: behavioralAnomalyScore,
         model_variant: selectedModelVariant,
         model_assignment_bucket: selectedModelBucket,
-        challenger_traffic_percent: challengerTrafficPercent
+        challenger_traffic_percent: challengerTrafficPercent,
+        channel_risk_score: channelRiskScore,
+        adversarial_attack_score: adversarialAttackScore,
+        multimodal_risk_score: multimodalRiskScore,
+        review_threshold: reviewThreshold,
+        block_threshold: blockThreshold
       }
     });
 
     let alertId: string | undefined;
     let caseId: string | undefined;
+    let contextualAuthChallengeId: string | undefined;
     if (finalDecision === "review" || finalDecision === "block") {
       const alertSeverity = finalDecision === "block" ? "critical" : "high";
       const alertType = finalDecision === "block" ? "Blocked Transaction" : "Transaction Review Required";
@@ -2222,6 +2315,37 @@ export async function analyzeTransaction(
       await client.from("rule_executions").insert(executionRows);
     }
 
+    if (
+      finalDecision !== "approve" &&
+      (requiresStepUpAuth ||
+        finalHeuristicScore >= reviewThreshold ||
+        behavioralAnomalyScore >= 70 ||
+        adversarialAttackScore >= 70 ||
+        multimodalRiskScore >= 70)
+    ) {
+      const { data: challenge } = await client
+        .from("contextual_auth_challenges")
+        .insert({
+          merchant_id: input.merchant_id,
+          user_id: input.user_id ?? null,
+          transaction_id: transactionRow.id,
+          challenge_type: requiresStepUpAuth ? "step_up_auth" : "risk_based_auth",
+          status: "pending",
+          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+          context_payload: {
+            risk_score: finalHeuristicScore,
+            decision: finalDecision,
+            explanation
+          }
+        })
+        .select("id")
+        .maybeSingle();
+
+      if (challenge?.id) {
+        contextualAuthChallengeId = challenge.id;
+      }
+    }
+
     return {
       transaction_id: transactionRow.id,
       risk_score: finalHeuristicScore,
@@ -2230,7 +2354,8 @@ export async function analyzeTransaction(
       matched_rules: matchedRuleNames,
       persisted: true,
       alert_id: alertId,
-      case_id: caseId
+      case_id: caseId,
+      contextual_auth_challenge_id: contextualAuthChallengeId
     };
   } catch {
     return {

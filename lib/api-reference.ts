@@ -212,6 +212,38 @@ export const API_METHOD_REFERENCES: ApiMethodReference[] = [
   {
     groupId: "operations",
     method: "GET",
+    path: "/api/graph/risk-score",
+    role: "viewer",
+    auth: "operator_or_api_key",
+    summary: "List computed graph-risk findings for suspicious connected entities."
+  },
+  {
+    groupId: "operations",
+    method: "POST",
+    path: "/api/graph/risk-score",
+    role: "analyst",
+    auth: "operator_or_api_key",
+    summary: "Compute and persist graph-risk findings from materialized entity connections."
+  },
+  {
+    groupId: "operations",
+    method: "GET",
+    path: "/api/channels/baselines",
+    role: "viewer",
+    auth: "operator_or_api_key",
+    summary: "List channel-specific risk baselines for multi-channel fraud detection."
+  },
+  {
+    groupId: "operations",
+    method: "POST",
+    path: "/api/channels/ingest",
+    role: "analyst",
+    auth: "operator_or_api_key",
+    summary: "Ingest channel events, refresh channel baseline, and optionally score a transaction."
+  },
+  {
+    groupId: "operations",
+    method: "GET",
     path: "/api/entity-lists",
     role: "viewer",
     auth: "operator_or_api_key",
@@ -360,6 +392,22 @@ export const API_METHOD_REFERENCES: ApiMethodReference[] = [
     summary: "Upsert active/challenger model deployment configuration."
   },
 
+  {
+    groupId: "analytics",
+    method: "GET",
+    path: "/api/analytics/historical",
+    role: "viewer",
+    auth: "operator_or_api_key",
+    summary: "Read historical transaction-analysis snapshots and anomaly flags."
+  },
+  {
+    groupId: "analytics",
+    method: "POST",
+    path: "/api/analytics/historical",
+    role: "analyst",
+    auth: "operator_or_api_key",
+    summary: "Generate or refresh a historical analysis snapshot for a configurable date window."
+  },
   {
     groupId: "analytics",
     method: "POST",
@@ -536,6 +584,142 @@ export const API_METHOD_REFERENCES: ApiMethodReference[] = [
     role: "analyst",
     auth: "operator_or_api_key",
     summary: "Generate chargeback-prevention playbook actions from risk/payment signals."
+  },
+  {
+    groupId: "intelligence",
+    method: "GET",
+    path: "/api/contextual-auth/challenges",
+    role: "viewer",
+    auth: "operator_or_api_key",
+    summary: "List contextual-authentication challenges for risk-based step-up flows."
+  },
+  {
+    groupId: "intelligence",
+    method: "POST",
+    path: "/api/contextual-auth/challenges",
+    role: "analyst",
+    auth: "operator_or_api_key",
+    summary: "Create contextual-authentication challenges for users or transactions."
+  },
+  {
+    groupId: "intelligence",
+    method: "PATCH",
+    path: "/api/contextual-auth/challenges/:id/resolve",
+    role: "analyst",
+    auth: "operator_or_api_key",
+    summary: "Resolve a contextual-authentication challenge as passed, failed, or expired."
+  },
+  {
+    groupId: "intelligence",
+    method: "GET",
+    path: "/api/advanced/federated-learning",
+    role: "viewer",
+    auth: "operator_or_api_key",
+    summary: "List federated-learning rounds and aggregation metadata."
+  },
+  {
+    groupId: "intelligence",
+    method: "POST",
+    path: "/api/advanced/federated-learning",
+    role: "admin",
+    auth: "operator_or_api_key",
+    summary: "Create or update federated-learning rounds for collaborative model training."
+  },
+  {
+    groupId: "intelligence",
+    method: "POST",
+    path: "/api/advanced/synthetic-fraud/generate",
+    role: "analyst",
+    auth: "operator_or_api_key",
+    summary: "Generate synthetic fraud samples for model training and scenario testing."
+  },
+  {
+    groupId: "intelligence",
+    method: "POST",
+    path: "/api/advanced/explainability",
+    role: "viewer",
+    auth: "operator_or_api_key",
+    summary: "Build model/heuristic explanation factors for a transaction risk decision."
+  },
+  {
+    groupId: "intelligence",
+    method: "GET",
+    path: "/api/advanced/cross-merchant/intelligence",
+    role: "viewer",
+    auth: "operator_or_api_key",
+    summary: "Read privacy-preserving cross-merchant intelligence aggregates."
+  },
+  {
+    groupId: "intelligence",
+    method: "POST",
+    path: "/api/advanced/cross-merchant/intelligence",
+    role: "analyst",
+    auth: "operator_or_api_key",
+    summary: "Share hashed intelligence signals and receive consortium-level prevalence."
+  },
+  {
+    groupId: "intelligence",
+    method: "POST",
+    path: "/api/advanced/adversarial/detect",
+    role: "analyst",
+    auth: "operator_or_api_key",
+    summary: "Detect adversarial payload patterns and optionally feed score into transaction analysis."
+  },
+  {
+    groupId: "policy",
+    method: "POST",
+    path: "/api/advanced/dynamic-thresholds/recalculate",
+    role: "admin",
+    auth: "operator_or_api_key",
+    summary: "Recalculate merchant risk thresholds based on live fraud and quality metrics."
+  },
+  {
+    groupId: "intelligence",
+    method: "POST",
+    path: "/api/advanced/multimodal/analyze",
+    role: "analyst",
+    auth: "operator_or_api_key",
+    summary: "Combine text/image/voice/behavior risk signals into one multimodal assessment."
+  },
+  {
+    groupId: "intelligence",
+    method: "POST",
+    path: "/api/advanced/simulation/run",
+    role: "analyst",
+    auth: "operator_or_api_key",
+    summary: "Run fraud simulation scenarios with synthetic perturbations of risk scores."
+  },
+  {
+    groupId: "policy",
+    method: "GET",
+    path: "/api/advanced/cryptography/keys",
+    role: "viewer",
+    auth: "operator_or_api_key",
+    summary: "List quantum-ready key metadata and active rotation state."
+  },
+  {
+    groupId: "policy",
+    method: "POST",
+    path: "/api/advanced/cryptography/keys",
+    role: "admin",
+    auth: "operator_or_api_key",
+    summary: "Rotate hybrid quantum-ready keys and activate a new key version."
+  },
+  {
+    groupId: "intelligence",
+    method: "POST",
+    path: "/api/advanced/blockchain/verify",
+    role: "analyst",
+    auth: "operator_or_api_key",
+    summary: "Append immutable verification hashes for fraud entities using hash-chain logging."
+  },
+  {
+    groupId: "policy",
+    method: "POST",
+    path: "/api/advanced/automl/run",
+    role: "admin",
+    auth: "operator_or_api_key",
+    summary: "Run AutoML candidate search and persist best model configuration."
   },
 
   {
