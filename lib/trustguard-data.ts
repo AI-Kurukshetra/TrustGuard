@@ -46,6 +46,10 @@ interface AnalyzeTransactionInput {
   device_is_new?: boolean;
   velocity_count?: number;
   geo_mismatch?: boolean;
+  travel_speed_kmh?: number;
+  login_gap_minutes?: number;
+  user_in_whitelist?: boolean;
+  device_trust_score?: number;
   merchant_id?: string;
   user_id?: string | null;
   session_id?: string | null;
@@ -67,6 +71,7 @@ interface AnalyzeTransactionResult {
   risk_score: number;
   decision: "approve" | "review" | "block";
   explanation: string[];
+  matched_rules: string[];
   persisted: boolean;
 }
 
@@ -81,6 +86,16 @@ interface RegisterDeviceInput {
   timezone?: string;
   language?: string;
 }
+
+interface ActiveRuleRecord {
+  id: string;
+  rule_name: string;
+  condition_expression: string;
+  action: "allow" | "review" | "block" | "step_up_auth" | "create_alert";
+  priority: number;
+}
+
+type SupportedDecision = AnalyzeTransactionResult["decision"];
 
 function getReadClient(): SupabaseClientLike {
   if (hasSupabaseServiceRoleEnv()) {
@@ -112,6 +127,127 @@ function normalizeRuleAction(action: string): RiskRule["action"] {
     return "review";
   }
   return "approve";
+}
+
+function parseLiteralValue(rawValue: string): boolean | number | string {
+  const value = rawValue.trim();
+
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+
+  const numericValue = Number(value);
+  if (!Number.isNaN(numericValue) && value !== "") {
+    return numericValue;
+  }
+
+  if (
+    (value.startsWith("'") && value.endsWith("'")) ||
+    (value.startsWith('"') && value.endsWith('"'))
+  ) {
+    return value.slice(1, -1);
+  }
+
+  return value;
+}
+
+function evaluatePredicate(expression: string, context: Record<string, boolean | number | string>) {
+  const match = expression.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*(>=|<=|=|>|<)\s*(.+)$/);
+  if (!match) {
+    return false;
+  }
+
+  const [, variable, operator, rawExpected] = match;
+  const leftValue = context[variable];
+  if (leftValue === undefined || leftValue === null) {
+    return false;
+  }
+
+  const expectedValue = parseLiteralValue(rawExpected);
+
+  if (operator === "=") {
+    return String(leftValue) === String(expectedValue);
+  }
+
+  if (typeof leftValue !== "number" || typeof expectedValue !== "number") {
+    return false;
+  }
+
+  if (operator === ">") {
+    return leftValue > expectedValue;
+  }
+  if (operator === "<") {
+    return leftValue < expectedValue;
+  }
+  if (operator === ">=") {
+    return leftValue >= expectedValue;
+  }
+  return leftValue <= expectedValue;
+}
+
+function evaluateRuleCondition(
+  conditionExpression: string,
+  context: Record<string, boolean | number | string>
+) {
+  const andGroups = conditionExpression
+    .split(/\s+OR\s+/i)
+    .map((group) => group.trim())
+    .filter(Boolean);
+
+  return andGroups.some((andGroup) => {
+    const predicates = andGroup
+      .split(/\s+AND\s+/i)
+      .map((predicate) => predicate.trim())
+      .filter(Boolean);
+
+    if (predicates.length === 0) {
+      return false;
+    }
+
+    return predicates.every((predicate) => evaluatePredicate(predicate, context));
+  });
+}
+
+function actionToDecision(action: ActiveRuleRecord["action"]): SupportedDecision {
+  if (action === "block") {
+    return "block";
+  }
+  if (action === "review" || action === "step_up_auth" || action === "create_alert") {
+    return "review";
+  }
+  return "approve";
+}
+
+function decisionRank(decision: SupportedDecision) {
+  if (decision === "block") {
+    return 3;
+  }
+  if (decision === "review") {
+    return 2;
+  }
+  return 1;
+}
+
+function selectFinalDecision(
+  heuristicDecision: SupportedDecision,
+  matchedRules: ActiveRuleRecord[]
+): SupportedDecision {
+  if (matchedRules.length === 0) {
+    return heuristicDecision;
+  }
+
+  const sorted = [...matchedRules].sort((left, right) => {
+    if (left.priority !== right.priority) {
+      return left.priority - right.priority;
+    }
+    return decisionRank(actionToDecision(right.action)) - decisionRank(actionToDecision(left.action));
+  });
+
+  const ruleDecision = actionToDecision(sorted[0].action);
+  return decisionRank(ruleDecision) >= decisionRank(heuristicDecision) ? ruleDecision : heuristicDecision;
 }
 
 function normalizeCaseStatus(status: string): FraudCase["status"] {
@@ -263,6 +399,21 @@ async function fetchRiskRules(client: SupabaseClientLike) {
       hitRate: Number(row.hit_count ?? 0)
     })
   );
+}
+
+async function fetchActiveRuleRecords(client: SupabaseClientLike, merchantId: string) {
+  const { data, error } = await client
+    .from("risk_rules")
+    .select("id, rule_name, condition_expression, action, priority")
+    .eq("merchant_id", merchantId)
+    .eq("active", true)
+    .order("priority", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as ActiveRuleRecord[];
 }
 
 function computeMetrics(transactions: Transaction[], fraudCases: FraudCase[]): DashboardMetric[] {
@@ -541,8 +692,12 @@ export async function registerDevice(input: RegisterDeviceInput) {
 export async function analyzeTransaction(input: AnalyzeTransactionInput): Promise<AnalyzeTransactionResult> {
   const amount = Number(input.amount ?? 0);
   const isNewDevice = Boolean(input.device_is_new);
-  const velocityCount = Number(input.velocity_count ?? 0);
+  let velocityCount = Number(input.velocity_count ?? 0);
   const geoMismatch = Boolean(input.geo_mismatch);
+  const travelSpeedKmh = Number(input.travel_speed_kmh ?? 0);
+  const loginGapMinutes = Number(input.login_gap_minutes ?? 0);
+  const userInWhitelist = Boolean(input.user_in_whitelist);
+  const deviceTrustScore = Number(input.device_trust_score ?? 0);
 
   let riskScore = 10;
 
@@ -563,28 +718,77 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
   }
 
   const normalizedScore = Math.min(100, riskScore);
-  const decision = normalizedScore >= 85 ? "block" : normalizedScore >= 60 ? "review" : "approve";
-  const explanation = [
+  const heuristicDecision = normalizedScore >= 85 ? "block" : normalizedScore >= 60 ? "review" : "approve";
+  const baseExplanation = [
     amount > 1500 ? "high_amount" : null,
     isNewDevice ? "new_device" : null,
     velocityCount >= 5 ? "velocity_spike" : null,
     geoMismatch ? "geolocation_mismatch" : null
   ].filter(Boolean) as string[];
 
+  const buildRuleContext = () => ({
+    transaction_amount: amount,
+    device_is_new: isNewDevice,
+    velocity_count: velocityCount,
+    geo_mismatch: geoMismatch,
+    travel_speed_kmh: travelSpeedKmh,
+    login_gap_minutes: loginGapMinutes,
+    user_in_whitelist: userInWhitelist,
+    device_trust_score: deviceTrustScore
+  });
+  const fallbackContext = buildRuleContext();
+
+  const mockRules: ActiveRuleRecord[] = mockRiskRules.map((rule, index) => ({
+    id: rule.id,
+    rule_name: rule.ruleName,
+    condition_expression: rule.condition,
+    action: rule.action === "approve" ? "allow" : rule.action,
+    priority: index + 1
+  }));
+
+  const fallbackMatchedRules = mockRules.filter((rule) =>
+    evaluateRuleCondition(rule.condition_expression, fallbackContext)
+  );
+  const fallbackDecision = selectFinalDecision(heuristicDecision, fallbackMatchedRules);
+  const fallbackMatchedRuleNames = fallbackMatchedRules.map((rule) => rule.rule_name);
+  const fallbackExplanation = [...baseExplanation, ...fallbackMatchedRuleNames].filter(Boolean);
+
   if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv() || !input.merchant_id) {
     return {
       transaction_id: input.external_transaction_id ?? "txn_preview",
       risk_score: normalizedScore,
-      decision,
-      explanation,
+      decision: fallbackDecision,
+      explanation: fallbackExplanation,
+      matched_rules: fallbackMatchedRuleNames,
       persisted: false
     };
   }
 
   try {
     const client = createSupabaseAdminClient();
+
+    if (!input.velocity_count && input.user_id) {
+      const oneHourAgoIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { count } = await client
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("merchant_id", input.merchant_id)
+        .eq("user_id", input.user_id)
+        .gte("occurred_at", oneHourAgoIso);
+
+      velocityCount = count ?? velocityCount;
+    }
+
+    const activeRules = await fetchActiveRuleRecords(client, input.merchant_id);
+    const context = buildRuleContext();
+    const matchedRules = activeRules.filter((rule) =>
+      evaluateRuleCondition(rule.condition_expression, context)
+    );
+    const matchedRuleNames = matchedRules.map((rule) => rule.rule_name);
+    const finalDecision = selectFinalDecision(heuristicDecision, matchedRules);
+    const explanation = [...baseExplanation, ...matchedRuleNames].filter(Boolean);
     const transactionStatus =
-      decision === "block" ? "blocked" : decision === "review" ? "review" : "approved";
+      finalDecision === "block" ? "blocked" : finalDecision === "review" ? "review" : "approved";
 
     const { data: transactionRow, error: transactionError } = await client
       .from("transactions")
@@ -599,7 +803,7 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
         currency: input.currency ?? "USD",
         status: transactionStatus,
         risk_score: normalizedScore,
-        recommended_action: decision === "approve" ? "allow" : decision,
+        recommended_action: finalDecision === "approve" ? "allow" : finalDecision,
         channel: input.channel ?? "web",
         payment_provider: input.payment_provider ?? null,
         merchant_order_id: input.merchant_order_id ?? null,
@@ -628,29 +832,53 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
       entity_id: transactionRow.id,
       transaction_id: transactionRow.id,
       score: normalizedScore,
-      recommended_action: decision === "approve" ? "allow" : decision,
+      recommended_action: finalDecision === "approve" ? "allow" : finalDecision,
       reasons: explanation,
       feature_snapshot: {
         amount,
         device_is_new: isNewDevice,
         velocity_count: velocityCount,
-        geo_mismatch: geoMismatch
+        geo_mismatch: geoMismatch,
+        travel_speed_kmh: travelSpeedKmh,
+        login_gap_minutes: loginGapMinutes,
+        user_in_whitelist: userInWhitelist,
+        device_trust_score: deviceTrustScore
       }
     });
+
+    if (activeRules.length > 0) {
+      const executionRows = activeRules.map((rule) => {
+        const matchedRule = matchedRules.find((item) => item.id === rule.id);
+        return {
+          merchant_id: input.merchant_id,
+          rule_id: rule.id,
+          transaction_id: transactionRow.id,
+          entity_type: "transaction",
+          entity_id: transactionRow.id,
+          matched: Boolean(matchedRule),
+          action_taken: matchedRule ? rule.action : null,
+          evaluation_context: context
+        };
+      });
+
+      await client.from("rule_executions").insert(executionRows);
+    }
 
     return {
       transaction_id: transactionRow.id,
       risk_score: normalizedScore,
-      decision,
+      decision: finalDecision,
       explanation,
+      matched_rules: matchedRuleNames,
       persisted: true
     };
   } catch {
     return {
       transaction_id: input.external_transaction_id ?? "txn_preview",
       risk_score: normalizedScore,
-      decision,
-      explanation,
+      decision: fallbackDecision,
+      explanation: fallbackExplanation,
+      matched_rules: fallbackMatchedRuleNames,
       persisted: false
     };
   }

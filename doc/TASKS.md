@@ -7,6 +7,7 @@
 - [x] 2026-03-14 10:39 Create the initial Supabase SQL migration for the TrustGuard schema and RLS
 - [x] 2026-03-14 10:40 Add Supabase app integration scaffolding and a second migration with deterministic demo seed data
 - [x] 2026-03-14 11:03 Create execution roadmap mapping all 20 core features to sprint phases and acceptance criteria
+- [x] 2026-03-14 11:08 Sprint 1: implement runtime risk rule evaluation and persist `rule_executions` during transaction scoring
 - [x] 2026-03-14 10:35 Scaffold Next.js + Tailwind TrustGuard MVP foundation
 - [x] 2026-03-14 10:35 Build primary dashboard views for monitoring, transactions, cases, rules, and alerts
 - [x] 2026-03-14 10:35 Add mock REST API endpoints for transaction scoring, device registration, alerts, and user risk profiles
