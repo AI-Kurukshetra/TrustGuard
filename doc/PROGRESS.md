@@ -51,3 +51,4 @@
 [2026-03-14 15:47] codex — Fixed strict TS issues in `lib/advanced-intelligence.ts` (literal-union impact typing + tuple-typed modality scores), returning `pnpm typecheck` to green.
 [2026-03-14 15:48] codex — Completed remaining core + advanced scope: added advanced-intelligence migration, graph/channel/historical/contextual-auth APIs, full advanced feature API suite, dynamic-threshold + contextual-auth scoring integration, and updated roadmap/status tracking docs.
 [2026-03-14 15:59] codex — Improved onboarding UX in Rules/Alerts/Cases by adding guided rule creation, alert and case queue summaries/filters, and plain-language next-step guidance for new analysts.
+[2026-03-14 16:06] codex — Simplified main dashboard UX by adding priority focus cards, collapsing secondary metrics, replacing static workload text with live counts, and limiting queues to top 5 items with clear view-all actions.

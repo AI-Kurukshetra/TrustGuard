@@ -66,3 +66,4 @@
 - Treat contextual authentication as part of the scoring pipeline by auto-creating challenges on high-risk/step-up signals and exposing challenge lifecycle endpoints for analyst/automation resolution.
 - Use hash-based privacy-preserving cross-merchant signals plus hash-chain verification logs to deliver shared intelligence and immutable verification without exposing raw tenant data.
 - Prioritize guided-first workflows in analyst consoles (rules/alerts/cases): expose safe defaults, templates, and plain-language next steps before advanced controls to reduce early misconfiguration and speed first-time operator adoption.
+- Keep the dashboard home optimized for immediate action: show priority queues and only essential KPIs by default, while exposing secondary telemetry behind expandable detail panels to reduce first-screen cognitive load.

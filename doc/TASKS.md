@@ -61,3 +61,4 @@
 - [x] 2026-03-14 15:48 Integrate contextual-auth challenge lifecycle (`/api/contextual-auth/challenges`) and scoring-triggered step-up challenge creation
 - [x] 2026-03-14 15:48 Update roadmap tracking board to reflect complete core + advanced feature coverage and post-completion hardening queue
 - [x] 2026-03-14 15:59 Simplify Rules, Alerts, and Cases UX for new users with guided rule templates, queue filters, and clearer next-step guidance
+- [x] 2026-03-14 16:06 Simplify dashboard main page with focus-first cards, dynamic live counts, reduced KPI complexity, and shorter action-oriented queues
