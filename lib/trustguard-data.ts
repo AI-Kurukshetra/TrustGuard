@@ -8,8 +8,7 @@ import {
   transactions as mockTransactions,
   users as mockUsers
 } from "@/lib/mock-data";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { hasSupabaseEnv, hasSupabaseServiceRoleEnv } from "@/lib/supabase/config";
+import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Alert, DashboardMetric, Device, FraudCase, RiskRule, Transaction, User } from "@/lib/types";
 
@@ -118,9 +117,6 @@ type SupportedDecision = AnalyzeTransactionResult["decision"];
 type CaseStatus = "open" | "in_review" | "escalated" | "resolved";
 
 function getReadClient(): SupabaseClientLike {
-  if (hasSupabaseServiceRoleEnv()) {
-    return createSupabaseAdminClient();
-  }
   return createSupabaseServerClient();
 }
 
@@ -677,13 +673,13 @@ export async function getRiskRulesData() {
   }
 }
 
-export async function getAlertsData(merchantId?: string) {
+export async function getAlertsData(merchantId?: string, client?: SupabaseClientLike) {
   if (!hasSupabaseEnv()) {
     return mockAlerts;
   }
 
   try {
-    return await fetchAlerts(getReadClient(), merchantId);
+    return await fetchAlerts(client ?? getReadClient(), merchantId);
   } catch {
     return mockAlerts;
   }
@@ -722,16 +718,20 @@ export async function getDashboardData(): Promise<DashboardData> {
   }
 }
 
-export async function getRiskProfileData(userId: string, merchantId?: string): Promise<RiskProfile | null> {
+export async function getRiskProfileData(
+  userId: string,
+  merchantId?: string,
+  client?: SupabaseClientLike
+): Promise<RiskProfile | null> {
   if (!hasSupabaseEnv()) {
     return getMockRiskProfile(userId);
   }
 
   try {
-    const client = getReadClient();
-    let users = await fetchUsers(client);
+    const db = client ?? getReadClient();
+    let users = await fetchUsers(db);
     if (merchantId) {
-      const { data: scopedUsers } = await client
+      const { data: scopedUsers } = await db
         .from("users")
         .select("id, email, risk_score, created_at, home_country")
         .eq("merchant_id", merchantId)
@@ -747,9 +747,9 @@ export async function getRiskProfileData(userId: string, merchantId?: string): P
           velocity24h: 0
         })) ?? [];
     }
-    const devices = await fetchDevices(client);
-    const transactions = await fetchTransactions(client);
-    const alerts = await fetchAlerts(client, merchantId);
+    const devices = await fetchDevices(db);
+    const transactions = await fetchTransactions(db);
+    const alerts = await fetchAlerts(db, merchantId);
     const user = users.find((item) => item.id === userId);
 
     if (!user) {
@@ -773,14 +773,18 @@ export async function getRiskProfileData(userId: string, merchantId?: string): P
   }
 }
 
-export async function getEntityListsData(merchantId: string, listType?: "whitelist" | "blacklist") {
-  if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv()) {
+export async function getEntityListsData(
+  merchantId: string,
+  listType?: "whitelist" | "blacklist",
+  client?: SupabaseClientLike
+) {
+  if (!hasSupabaseEnv()) {
     return [];
   }
 
   try {
-    const client = createSupabaseAdminClient();
-    let query = client
+    const db = client ?? createSupabaseServerClient();
+    let query = db
       .from("entity_lists")
       .select("id, merchant_id, list_type, entity_type, entity_value, reason, active, created_at")
       .eq("merchant_id", merchantId)
@@ -808,14 +812,14 @@ export async function upsertEntityListRecord(input: {
   entity_value: string;
   reason?: string | null;
   active?: boolean;
-}) {
-  if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv()) {
+}, client?: SupabaseClientLike) {
+  if (!hasSupabaseEnv()) {
     return { updated: false as const };
   }
 
   try {
-    const client = createSupabaseAdminClient();
-    const { data, error } = await client
+    const db = client ?? createSupabaseServerClient();
+    const { data, error } = await db
       .from("entity_lists")
       .upsert(
         {
@@ -851,14 +855,14 @@ export async function deleteEntityListRecord(input: {
   list_type: "whitelist" | "blacklist";
   entity_type: "user" | "transaction" | "device" | "session" | "payment_method" | "merchant";
   entity_value: string;
-}) {
-  if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv()) {
+}, client?: SupabaseClientLike) {
+  if (!hasSupabaseEnv()) {
     return { deleted: false as const };
   }
 
   try {
-    const client = createSupabaseAdminClient();
-    const { error } = await client
+    const db = client ?? createSupabaseServerClient();
+    const { error } = await db
       .from("entity_lists")
       .delete()
       .eq("merchant_id", input.merchant_id)
@@ -882,15 +886,15 @@ export async function updateFraudCaseStatus(input: {
   status: CaseStatus;
   actor_id?: string | null;
   note?: string | null;
-}) {
-  if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv()) {
+}, client?: SupabaseClientLike) {
+  if (!hasSupabaseEnv()) {
     return { updated: false as const };
   }
 
   try {
-    const client = createSupabaseAdminClient();
+    const db = client ?? createSupabaseServerClient();
     const resolvedAt = input.status === "resolved" ? new Date().toISOString() : null;
-    const { data: fraudCase, error } = await client
+    const { data: fraudCase, error } = await db
       .from("fraud_cases")
       .update({
         status: input.status,
@@ -906,7 +910,7 @@ export async function updateFraudCaseStatus(input: {
       throw error;
     }
 
-    await client.from("fraud_case_events").insert({
+    await db.from("fraud_case_events").insert({
       merchant_id: input.merchant_id,
       fraud_case_id: input.case_id,
       actor_id: input.actor_id ?? null,
@@ -937,7 +941,7 @@ function hashDeviceFingerprint(input: string) {
   return `fp_${Math.abs(hash).toString(36)}`;
 }
 
-export async function registerDevice(input: RegisterDeviceInput) {
+export async function registerDevice(input: RegisterDeviceInput, client?: SupabaseClientLike) {
   const fingerprintSource = [
     input.browser,
     input.os,
@@ -950,7 +954,7 @@ export async function registerDevice(input: RegisterDeviceInput) {
 
   const deviceHash = hashDeviceFingerprint(fingerprintSource);
 
-  if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv() || !input.merchant_id) {
+  if (!hasSupabaseEnv() || !input.merchant_id || !client) {
     return {
       user_id: input.user_id ?? null,
       device_hash: deviceHash,
@@ -959,7 +963,6 @@ export async function registerDevice(input: RegisterDeviceInput) {
   }
 
   try {
-    const client = createSupabaseAdminClient();
     await client.from("devices").insert({
       merchant_id: input.merchant_id,
       user_id: input.user_id ?? null,
@@ -988,7 +991,10 @@ export async function registerDevice(input: RegisterDeviceInput) {
   }
 }
 
-export async function analyzeTransaction(input: AnalyzeTransactionInput): Promise<AnalyzeTransactionResult> {
+export async function analyzeTransaction(
+  input: AnalyzeTransactionInput,
+  client?: SupabaseClientLike
+): Promise<AnalyzeTransactionResult> {
   const amount = Number(input.amount ?? 0);
   const isNewDevice = Boolean(input.device_is_new);
   let velocityCount1h = Number(input.velocity_count ?? 0);
@@ -1050,7 +1056,7 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
   const fallbackMatchedRuleNames = fallbackMatchedRules.map((rule) => rule.rule_name);
   const fallbackExplanation = [...baseExplanation, ...fallbackMatchedRuleNames].filter(Boolean);
 
-  if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv() || !input.merchant_id) {
+  if (!hasSupabaseEnv() || !input.merchant_id || !client) {
     return {
       transaction_id: input.external_transaction_id ?? "txn_preview",
       risk_score: normalizedScore,
@@ -1062,7 +1068,6 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
   }
 
   try {
-    const client = createSupabaseAdminClient();
     const { data: entityListRows } = await client
       .from("entity_lists")
       .select("list_type, entity_type, entity_value")

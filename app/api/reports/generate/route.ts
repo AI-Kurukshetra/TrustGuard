@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractMerchantId, merchantErrorResponse } from "@/lib/api-auth";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { hasSupabaseEnv, hasSupabaseServiceRoleEnv } from "@/lib/supabase/config";
+import { requireMerchantAuth } from "@/lib/api-auth";
+import { hasSupabaseEnv } from "@/lib/supabase/config";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const merchantId = extractMerchantId(request, body);
-  if (!merchantId) {
-    return merchantErrorResponse();
+  const body = (await request.json()) as Record<string, unknown>;
+  const auth = await requireMerchantAuth(request, body, "admin");
+  if (!auth.ok) {
+    return auth.response;
   }
 
-  if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv()) {
+  if (!hasSupabaseEnv() || !auth.context.supabase) {
     return NextResponse.json({ error: "Supabase not configured" }, { status: 400 });
   }
 
@@ -21,11 +20,11 @@ export async function POST(request: NextRequest) {
     typeof body.period_start === "string" ? body.period_start : new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
   const periodEnd = typeof body.period_end === "string" ? body.period_end : new Date().toISOString().slice(0, 10);
 
-  const client = createSupabaseAdminClient();
+  const client = auth.context.supabase;
   const { data: transactions, error: txError } = await client
     .from("transactions")
     .select("id, status, risk_score, amount, currency, occurred_at")
-    .eq("merchant_id", merchantId)
+    .eq("merchant_id", auth.context.merchantId)
     .gte("occurred_at", `${periodStart}T00:00:00.000Z`)
     .lte("occurred_at", `${periodEnd}T23:59:59.999Z`);
 
@@ -56,7 +55,7 @@ export async function POST(request: NextRequest) {
   const { data, error } = await client
     .from("compliance_reports")
     .insert({
-      merchant_id: merchantId,
+      merchant_id: auth.context.merchantId,
       report_type: reportType,
       period_start: periodStart,
       period_end: periodEnd,

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractMerchantId, merchantErrorResponse } from "@/lib/api-auth";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { hasSupabaseEnv, hasSupabaseServiceRoleEnv } from "@/lib/supabase/config";
+import { requireMerchantAuth } from "@/lib/api-auth";
+import { hasSupabaseEnv } from "@/lib/supabase/config";
 
 export const dynamic = "force-dynamic";
 
@@ -23,24 +22,23 @@ function isLikelyValidMethod(body: Record<string, unknown>) {
 
 export async function POST(request: NextRequest) {
   const body = (await request.json()) as Record<string, unknown>;
-  const merchantId = extractMerchantId(request, body);
-  if (!merchantId) {
-    return merchantErrorResponse();
+  const auth = await requireMerchantAuth(request, body, "analyst");
+  if (!auth.ok) {
+    return auth.response;
   }
 
   const isValid = isLikelyValidMethod(body);
 
-  if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv()) {
+  if (!hasSupabaseEnv() || !auth.context.supabase) {
     return NextResponse.json({ validated: isValid, source: "local_heuristic" });
   }
 
   const methodId = typeof body.payment_method_id === "string" ? body.payment_method_id : null;
   if (methodId) {
-    const client = createSupabaseAdminClient();
-    await client
+    await auth.context.supabase
       .from("payment_methods")
       .update({ validation_status: isValid ? "verified" : "failed" })
-      .eq("merchant_id", merchantId)
+      .eq("merchant_id", auth.context.merchantId)
       .eq("id", methodId);
   }
 

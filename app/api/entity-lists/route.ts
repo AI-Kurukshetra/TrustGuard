@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractMerchantId, merchantErrorResponse } from "@/lib/api-auth";
+import { requireMerchantAuth } from "@/lib/api-auth";
 import { deleteEntityListRecord, getEntityListsData, upsertEntityListRecord } from "@/lib/trustguard-data";
 
 export const dynamic = "force-dynamic";
@@ -8,24 +8,24 @@ const validListTypes = new Set(["whitelist", "blacklist"]);
 const validEntityTypes = new Set(["user", "transaction", "device", "session", "payment_method", "merchant"]);
 
 export async function GET(request: NextRequest) {
-  const merchantId = extractMerchantId(request);
-  if (!merchantId) {
-    return merchantErrorResponse();
+  const auth = await requireMerchantAuth(request, undefined, "viewer");
+  if (!auth.ok) {
+    return auth.response;
   }
 
   const listTypeParam = request.nextUrl.searchParams.get("list_type");
   const listType =
     listTypeParam && validListTypes.has(listTypeParam) ? (listTypeParam as "whitelist" | "blacklist") : undefined;
 
-  const data = await getEntityListsData(merchantId, listType);
+  const data = await getEntityListsData(auth.context.merchantId, listType, auth.context.supabase ?? undefined);
   return NextResponse.json({ data });
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const merchantId = extractMerchantId(request, body);
-  if (!merchantId) {
-    return merchantErrorResponse();
+  const body = (await request.json()) as Record<string, unknown>;
+  const auth = await requireMerchantAuth(request, body, "analyst");
+  if (!auth.ok) {
+    return auth.response;
   }
 
   const listType = typeof body.list_type === "string" ? body.list_type : "";
@@ -36,13 +36,13 @@ export async function POST(request: NextRequest) {
   }
 
   const result = await upsertEntityListRecord({
-    merchant_id: merchantId,
+    merchant_id: auth.context.merchantId,
     list_type: listType as "whitelist" | "blacklist",
     entity_type: entityType as "user" | "transaction" | "device" | "session" | "payment_method" | "merchant",
     entity_value: entityValue,
     reason: typeof body.reason === "string" ? body.reason : null,
     active: typeof body.active === "boolean" ? body.active : true
-  });
+  }, auth.context.supabase ?? undefined);
 
   if (!result.updated) {
     return NextResponse.json({ error: "Unable to update list" }, { status: 400 });
@@ -52,10 +52,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const body = await request.json();
-  const merchantId = extractMerchantId(request, body);
-  if (!merchantId) {
-    return merchantErrorResponse();
+  const body = (await request.json()) as Record<string, unknown>;
+  const auth = await requireMerchantAuth(request, body, "analyst");
+  if (!auth.ok) {
+    return auth.response;
   }
 
   const listType = typeof body.list_type === "string" ? body.list_type : "";
@@ -66,11 +66,11 @@ export async function DELETE(request: NextRequest) {
   }
 
   const result = await deleteEntityListRecord({
-    merchant_id: merchantId,
+    merchant_id: auth.context.merchantId,
     list_type: listType as "whitelist" | "blacklist",
     entity_type: entityType as "user" | "transaction" | "device" | "session" | "payment_method" | "merchant",
     entity_value: entityValue
-  });
+  }, auth.context.supabase ?? undefined);
 
   if (!result.deleted) {
     return NextResponse.json({ error: "Unable to delete list record" }, { status: 400 });

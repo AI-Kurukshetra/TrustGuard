@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractMerchantId, merchantErrorResponse } from "@/lib/api-auth";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { hasSupabaseEnv, hasSupabaseServiceRoleEnv } from "@/lib/supabase/config";
+import { requireMerchantAuth } from "@/lib/api-auth";
+import { hasSupabaseEnv } from "@/lib/supabase/config";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const merchantId = extractMerchantId(request, body);
-  if (!merchantId) {
-    return merchantErrorResponse();
+  const body = (await request.json()) as Record<string, unknown>;
+  const auth = await requireMerchantAuth(request, body, "analyst");
+  if (!auth.ok) {
+    return auth.response;
   }
 
-  if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv()) {
+  if (!hasSupabaseEnv() || !auth.context.supabase) {
     return NextResponse.json({ error: "Supabase not configured" }, { status: 400 });
   }
 
@@ -20,11 +19,11 @@ export async function POST(request: NextRequest) {
   const dayStart = `${date}T00:00:00.000Z`;
   const dayEnd = `${date}T23:59:59.999Z`;
 
-  const client = createSupabaseAdminClient();
+  const client = auth.context.supabase;
   const { data: transactions, error: txError } = await client
     .from("transactions")
     .select("status, amount, risk_score")
-    .eq("merchant_id", merchantId)
+    .eq("merchant_id", auth.context.merchantId)
     .gte("occurred_at", dayStart)
     .lte("occurred_at", dayEnd);
 
@@ -35,7 +34,7 @@ export async function POST(request: NextRequest) {
   const { count: chargebackCount, error: cbError } = await client
     .from("chargebacks")
     .select("id", { count: "exact", head: true })
-    .eq("merchant_id", merchantId)
+    .eq("merchant_id", auth.context.merchantId)
     .gte("received_at", dayStart)
     .lte("received_at", dayEnd);
 
@@ -59,7 +58,7 @@ export async function POST(request: NextRequest) {
     .from("daily_risk_metrics")
     .upsert(
       {
-        merchant_id: merchantId,
+        merchant_id: auth.context.merchantId,
         metric_date: date,
         total_transactions: totalTransactions,
         blocked_transactions: blockedTransactions,

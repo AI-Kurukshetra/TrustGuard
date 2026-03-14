@@ -1,26 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractMerchantId, merchantErrorResponse } from "@/lib/api-auth";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { hasSupabaseEnv, hasSupabaseServiceRoleEnv } from "@/lib/supabase/config";
+import { requireMerchantAuth } from "@/lib/api-auth";
+import { hasSupabaseEnv } from "@/lib/supabase/config";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const merchantId = extractMerchantId(request, body);
-  if (!merchantId) {
-    return merchantErrorResponse();
+  const body = (await request.json()) as Record<string, unknown>;
+  const auth = await requireMerchantAuth(request, body, "analyst");
+  if (!auth.ok) {
+    return auth.response;
   }
 
-  if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv()) {
+  if (!hasSupabaseEnv() || !auth.context.supabase) {
     return NextResponse.json({ error: "Supabase not configured" }, { status: 400 });
   }
 
-  const client = createSupabaseAdminClient();
+  const client = auth.context.supabase;
   const { data: transactions, error } = await client
     .from("transactions")
     .select("id, user_id, device_id, payment_method_id, ip_address")
-    .eq("merchant_id", merchantId)
+    .eq("merchant_id", auth.context.merchantId)
     .not("user_id", "is", null)
     .order("occurred_at", { ascending: false })
     .limit(500);
@@ -33,7 +32,7 @@ export async function POST(request: NextRequest) {
   for (const tx of transactions ?? []) {
     if (tx.user_id && tx.device_id) {
       upserts.push({
-        merchant_id: merchantId,
+        merchant_id: auth.context.merchantId,
         left_entity_type: "user",
         left_entity_id: tx.user_id,
         right_entity_type: "device",
@@ -47,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     if (tx.user_id && tx.payment_method_id) {
       upserts.push({
-        merchant_id: merchantId,
+        merchant_id: auth.context.merchantId,
         left_entity_type: "user",
         left_entity_id: tx.user_id,
         right_entity_type: "payment_method",
