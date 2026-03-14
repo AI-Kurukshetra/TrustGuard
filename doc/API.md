@@ -360,7 +360,7 @@ Headers:
 
 - `x-merchant-id: <merchant_uuid>`
 
-Refreshes user-level `risk_score` by aggregating recent transaction risk scores.
+Refreshes user-level `risk_score` using a composite profile (recent transaction risk, blocked/review rates, chargebacks, identity verification status, and average device trust).
 
 ### GET `/api/auth/me`
 
@@ -464,6 +464,19 @@ Supports:
 - list compliance reports for a tenant
 - create compliance report artifact (`admin`)
 
+### GET/POST `/api/compliance/schedules`
+
+Supports:
+
+- list compliance automation schedules
+- create or update report schedules (`admin`)
+
+### POST `/api/compliance/schedules/run`
+
+Supports:
+
+- execute due schedules and generate compliance reports (`admin`)
+
 ### GET/POST `/api/geographical-locations`
 
 Supports:
@@ -491,3 +504,9 @@ Supports:
 
 - update pattern metadata/status (`analyst`)
 - delete pattern (`admin`)
+
+### POST `/api/chargebacks/prevention`
+
+Supports:
+
+- generate chargeback-prevention playbooks from transaction/risk signals

@@ -88,3 +88,8 @@
 - Updated transaction scoring to load deployment config, deterministically route transactions to active vs challenger variants, and persist assigned `model_id` + assignment metadata in `risk_scores.feature_snapshot`.
 - Updated API reference/docs (`lib/api-reference.ts`, `doc/API.md`, `README.md`, `doc/SCHEMA.md`) to include model deployment endpoints/table and new scoring metadata behavior.
 - Added a live execution tracking board to `doc/ROADMAP.md` with status rows for all 20 core and 12 advanced features plus a prioritized immediate execution queue.
+- Added migration `20260314160500_add_compliance_schedules.sql` for automated compliance scheduling with tenant RLS policies.
+- Added compliance scheduling APIs: `GET/POST /api/compliance/schedules` and `POST /api/compliance/schedules/run`.
+- Upgraded `POST /api/users/risk-profile/refresh` to composite risk profiling using transaction outcomes, chargebacks, identity verification status, and average device trust.
+- Added `POST /api/chargebacks/prevention` to return chargeback prevention playbooks and recommended mitigation actions from risk/payment signals.
+- Updated API/schema/reference docs to include compliance schedule and chargeback-prevention endpoints.

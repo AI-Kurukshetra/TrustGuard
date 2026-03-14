@@ -84,6 +84,8 @@ corepack pnpm exec vercel --version
 - `GET/POST /api/rules`
 - `GET/POST /api/webhooks`
 - `GET/POST /api/compliance/reports`
+- `GET/POST /api/compliance/schedules`
+- `POST /api/compliance/schedules/run`
 - `GET/POST /api/entity-lists`
 - `GET/POST /api/models`
 - `GET/POST /api/models/deployments`
@@ -91,6 +93,7 @@ corepack pnpm exec vercel --version
 - `PATCH /api/identity-verifications/:id`
 - `POST /api/identity-verifications/callback`
 - `GET/POST /api/fraud-patterns`
+- `POST /api/chargebacks/prevention`
 - `GET/POST /api/geographical-locations`
 - `GET/POST /api/behavioral-patterns`
 - `POST /api/analytics/refresh`
@@ -155,6 +158,7 @@ Supabase migrations are in:
 - `supabase/migrations/20260314143000_seed_remaining_tables.sql`
 - `supabase/migrations/20260314151000_add_integration_api_keys.sql`
 - `supabase/migrations/20260314155100_add_model_deployments.sql`
+- `supabase/migrations/20260314160500_add_compliance_schedules.sql`
 
 Canonical schema reference: `doc/SCHEMA.md`
 

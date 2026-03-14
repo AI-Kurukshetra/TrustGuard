@@ -50,3 +50,4 @@
 - [x] 2026-03-14 15:21 Phase R2 start: add identity-verification update/callback APIs and incorporate verification status into transaction scoring
 - [x] 2026-03-14 15:25 Phase R2: add model deployment control plane (active/challenger traffic split) and persist model assignment in scoring snapshots
 - [x] 2026-03-14 15:29 Add live execution tracking board in `doc/ROADMAP.md` for all 20 core + 12 advanced features with queue ordering
+- [x] 2026-03-14 15:33 Phase R2: add scheduled compliance automation APIs, composite user risk-profile refresh, and chargeback prevention playbook endpoint

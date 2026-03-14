@@ -176,7 +176,7 @@ export const API_METHOD_REFERENCES: ApiMethodReference[] = [
     path: "/api/users/risk-profile/refresh",
     role: "analyst",
     auth: "operator_or_api_key",
-    summary: "Recompute one user's aggregate risk score from recent activity."
+    summary: "Recompute customer risk using composite profile signals (transactions, chargebacks, identity, device trust)."
   },
   {
     groupId: "operations",
@@ -408,6 +408,30 @@ export const API_METHOD_REFERENCES: ApiMethodReference[] = [
     auth: "operator_or_api_key",
     summary: "Create one compliance report record."
   },
+  {
+    groupId: "analytics",
+    method: "GET",
+    path: "/api/compliance/schedules",
+    role: "viewer",
+    auth: "operator_or_api_key",
+    summary: "List compliance report automation schedules."
+  },
+  {
+    groupId: "analytics",
+    method: "POST",
+    path: "/api/compliance/schedules",
+    role: "admin",
+    auth: "operator_or_api_key",
+    summary: "Create or update one compliance report schedule."
+  },
+  {
+    groupId: "analytics",
+    method: "POST",
+    path: "/api/compliance/schedules/run",
+    role: "admin",
+    auth: "operator_or_api_key",
+    summary: "Run due compliance schedules and generate reports."
+  },
 
   {
     groupId: "intelligence",
@@ -504,6 +528,14 @@ export const API_METHOD_REFERENCES: ApiMethodReference[] = [
     role: "analyst",
     auth: "operator_or_api_key",
     summary: "Apply provider callback updates using verification_id or reference_id."
+  },
+  {
+    groupId: "intelligence",
+    method: "POST",
+    path: "/api/chargebacks/prevention",
+    role: "analyst",
+    auth: "operator_or_api_key",
+    summary: "Generate chargeback-prevention playbook actions from risk/payment signals."
   },
 
   {

@@ -645,6 +645,28 @@ Indexes:
 - index on `merchant_id, report_type`
 - index on `merchant_id, period_end desc`
 
+### compliance_report_schedules
+
+Schedule definitions for automated compliance report generation.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | primary key |
+| `merchant_id` | `uuid` | fk -> `merchants.id`, not null |
+| `report_type` | `text` | pci_dss, gdpr, etc. |
+| `frequency` | `text` | `daily`, `weekly`, `monthly` |
+| `active` | `boolean` | default `true` |
+| `next_run_at` | `timestamptz` | next automation timestamp |
+| `last_run_at` | `timestamptz` | nullable |
+| `created_by` | `uuid` | fk -> `auth.users.id`, nullable |
+| `created_at` | `timestamptz` | default `now()` |
+| `updated_at` | `timestamptz` | default `now()` |
+
+Indexes:
+
+- unique index on `merchant_id, report_type, frequency`
+- index on `merchant_id, active, next_run_at`
+
 ### webhook_endpoints
 
 | Column | Type | Notes |
@@ -772,6 +794,7 @@ Merchant-scoped API keys for backend-to-backend ingestion (transactions, device 
 - `merchants` 1 -> many `api_request_metrics`
 - `merchants` 1 -> many `integration_api_keys`
 - `merchants` 1 -> many `model_deployments`
+- `merchants` 1 -> many `compliance_report_schedules`
 - `users` 1 -> many `devices`
 - `users` 1 -> many `sessions`
 - `users` 1 -> many `payment_methods`
@@ -796,6 +819,7 @@ Merchant-scoped API keys for backend-to-backend ingestion (transactions, device 
 - check `risk_threshold_block between 0 and 100`
 - check `risk_threshold_block >= risk_threshold_review`
 - check `challenger_traffic_percent between 0 and 100`
+- check `frequency in (daily, weekly, monthly)` for `compliance_report_schedules`
 
 ## Recommended RLS Strategy
 
@@ -816,6 +840,7 @@ Supabase row-level security should be enabled for all business tables.
 ### Admin Access
 
 - admins can manage `risk_rules`, `webhook_endpoints`, `compliance_reports`, and merchant settings
+- admins can manage `compliance_report_schedules` for automated regulatory report runs
 - admins can manage `model_deployments` to control active/challenger model assignments
 
 ### Restricted Data

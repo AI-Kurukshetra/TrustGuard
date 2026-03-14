@@ -52,3 +52,6 @@
 - Use deterministic hash-based assignment (seeded by transaction/user identifiers) for challenger routing so model-variant selection is stable and reproducible across retries.
 - Persist selected deployment model id into `risk_scores.model_id` and snapshot fields to support downstream precision/recall analysis by variant.
 - Keep roadmap execution visible in-repo with a single live tracking board (core + advanced) so feature status and next priorities are explicit before each implementation cycle.
+- Implement compliance automation using schedule rows plus an explicit runner endpoint (`/api/compliance/schedules/run`) so execution can be triggered by cron/worker without coupling to UI flows.
+- Treat customer risk profiling as a composite signal (transactions + chargebacks + identity + device trust) instead of average transaction score alone.
+- Emit chargeback prevention guidance through a dedicated endpoint (`/api/chargebacks/prevention`) so analysts/integrations can apply playbooks consistently without duplicating decision logic.
