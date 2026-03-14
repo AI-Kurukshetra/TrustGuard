@@ -20,3 +20,4 @@
 - Added Sprint 3 analytics/graph/compliance foundations: schema for daily metrics + entity connections, analytics refresh/summary APIs, compliance report generation API, and graph materialization API.
 - Added payment method validation and user risk-profile refresh APIs, and enriched scoring with failed-login/chargeback-history/payment-validation heuristics.
 - Added Vitest test scaffolding and unit tests for rule-condition and heuristic-scoring logic.
+- Hardened API authentication with bearer token + tenant membership role checks, introduced request-scoped Supabase clients, and removed service-role client fallback from request API paths.

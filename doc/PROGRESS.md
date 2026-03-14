@@ -16,3 +16,4 @@
 [2026-03-14 11:39] codex — Added Sprint 3 foundation pieces: `daily_risk_metrics` and `entity_connections` schema, analytics refresh/summary APIs, compliance report generation API, and graph materialization API.
 [2026-03-14 11:46] codex — Added payment method validation and user risk profile refresh APIs to extend Sprint 2 trust-control coverage.
 [2026-03-14 11:52] codex — Added Vitest-based unit test scaffolding for rule evaluation and heuristic scoring; lint/typecheck pass, test run blocked in sandbox by `EAI_AGAIN localhost`.
+[2026-03-14 12:18] codex — Hardened API auth with bearer-token tenant membership checks, switched routes to request-scoped Supabase clients, and removed service-role fallback from request handling paths.

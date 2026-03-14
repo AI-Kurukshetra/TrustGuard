@@ -14,9 +14,10 @@
 - [x] 2026-03-14 11:31 Sprint 2: add basic model registry, identity verification, and behavioral biometrics ingest APIs
 - [x] 2026-03-14 11:39 Sprint 3: add historical analytics APIs, compliance report generation API, and graph materialization foundation
 - [x] 2026-03-14 11:46 Sprint 2: add payment method validation API and user risk profile refresh aggregation endpoint
+- [x] 2026-03-14 12:18 Cross-sprint security: enforce bearer-token merchant membership auth and remove service-role usage from request API path
 - [x] 2026-03-14 10:35 Scaffold Next.js + Tailwind TrustGuard MVP foundation
 - [x] 2026-03-14 10:35 Build primary dashboard views for monitoring, transactions, cases, rules, and alerts
 - [x] 2026-03-14 10:35 Add mock REST API endpoints for transaction scoring, device registration, alerts, and user risk profiles
 - [!] 2026-03-14 10:35 Resolve environment-specific Next.js production build failure (`EXDEV` on `.next` rename during static page output)
-- [ ] Connect the UI and APIs to Supabase-backed persistence and auth
+- [~] Connect the UI and APIs to Supabase-backed persistence and auth (API auth now request-scoped via Supabase JWT; UI auth wiring pending)
 - [~] Add test coverage and CI checks for core fraud flows (unit test scaffolding added; sandbox runner issue on `vitest`)
