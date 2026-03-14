@@ -44,3 +44,9 @@
 [2026-03-14 15:25] codex — Added `model_deployments` migration + API (`GET/POST /api/models/deployments`) and wired transaction scoring to assign active/challenger model variants deterministically, persisting `risk_scores.model_id` and model-assignment snapshot fields.
 [2026-03-14 15:29] codex — Added a live execution tracking board to `doc/ROADMAP.md` covering all core/advanced features with explicit status markers and immediate queue ordering.
 [2026-03-14 15:33] codex — Added compliance scheduling (`compliance_report_schedules` migration + `/api/compliance/schedules` + `/api/compliance/schedules/run`), upgraded user risk-profile refresh to composite scoring, and added `/api/chargebacks/prevention` playbook generation.
+[2026-03-14 15:37] codex — Reworked TrustGuard branding with a reusable logo component across auth/dashboard surfaces and added `app/icon.svg` for browser/app icon consistency.
+[2026-03-14 15:39] codex — Made the dashboard sidebar sticky on desktop and improved UX with grouped nav sections, stronger active-state cues, and quick-access setup/API docs links.
+[2026-03-14 15:41] codex — Added a mobile navigation drawer (`Menu` toggle + overlay/escape close + body scroll lock) and kept desktop sticky sidebar behavior for large screens.
+[2026-03-14 15:44] codex — Added smooth drawer open/close animation and touch swipe-to-close for mobile sidebar, with shared sidebar navigation reused for drawer and desktop.
+[2026-03-14 15:47] codex — Fixed strict TS issues in `lib/advanced-intelligence.ts` (literal-union impact typing + tuple-typed modality scores), returning `pnpm typecheck` to green.
+[2026-03-14 15:48] codex — Completed remaining core + advanced scope: added advanced-intelligence migration, graph/channel/historical/contextual-auth APIs, full advanced feature API suite, dynamic-threshold + contextual-auth scoring integration, and updated roadmap/status tracking docs.

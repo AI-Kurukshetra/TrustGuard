@@ -97,9 +97,26 @@ corepack pnpm exec vercel --version
 - `GET/POST /api/geographical-locations`
 - `GET/POST /api/behavioral-patterns`
 - `POST /api/analytics/refresh`
+- `GET/POST /api/analytics/historical`
 - `GET /api/analytics/summary`
 - `POST /api/graph/materialize`
+- `GET/POST /api/graph/risk-score`
+- `GET /api/channels/baselines`
+- `POST /api/channels/ingest`
 - `POST /api/payment-methods/validate`
+- `GET/POST /api/contextual-auth/challenges`
+- `PATCH /api/contextual-auth/challenges/:id/resolve`
+- `GET/POST /api/advanced/federated-learning`
+- `POST /api/advanced/synthetic-fraud/generate`
+- `POST /api/advanced/explainability`
+- `GET/POST /api/advanced/cross-merchant/intelligence`
+- `POST /api/advanced/adversarial/detect`
+- `POST /api/advanced/dynamic-thresholds/recalculate`
+- `POST /api/advanced/multimodal/analyze`
+- `POST /api/advanced/simulation/run`
+- `GET/POST /api/advanced/cryptography/keys`
+- `POST /api/advanced/blockchain/verify`
+- `POST /api/advanced/automl/run`
 - `GET /api/auth/me`
 - `POST /api/auth/signup`
 - `POST /api/auth/login`
@@ -159,6 +176,7 @@ Supabase migrations are in:
 - `supabase/migrations/20260314151000_add_integration_api_keys.sql`
 - `supabase/migrations/20260314155100_add_model_deployments.sql`
 - `supabase/migrations/20260314160500_add_compliance_schedules.sql`
+- `supabase/migrations/20260314172000_add_advanced_intelligence_features.sql`
 
 Canonical schema reference: `doc/SCHEMA.md`
 

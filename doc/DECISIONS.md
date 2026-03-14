@@ -55,3 +55,13 @@
 - Implement compliance automation using schedule rows plus an explicit runner endpoint (`/api/compliance/schedules/run`) so execution can be triggered by cron/worker without coupling to UI flows.
 - Treat customer risk profiling as a composite signal (transactions + chargebacks + identity + device trust) instead of average transaction score alone.
 - Emit chargeback prevention guidance through a dedicated endpoint (`/api/chargebacks/prevention`) so analysts/integrations can apply playbooks consistently without duplicating decision logic.
+- Centralize TrustGuard branding in a reusable `BrandLogo` component so the same mark/wordmark system is used consistently across auth and dashboard UI instead of ad-hoc text badges.
+- Keep sidebar navigation sticky only on large screens and add grouped sections + quick-access shortcuts to improve discoverability while preserving mobile flow simplicity.
+- Implement mobile navigation as a dedicated drawer component with explicit open/close state, overlay dismissal, and escape-key support, rather than forcing the desktop sidebar layout onto small screens.
+- For mobile drawer ergonomics, use both explicit controls and gesture support: slide animation for spatial continuity and left-swipe threshold close for one-handed navigation.
+- In strict TypeScript utilities, explicitly annotate literal unions and tuple arrays where inference widens (`string | number`) to avoid fragile downstream typing and ensure stable `tsc --noEmit`.
+- Implement remaining core and advanced capabilities as first-class API workflows backed by explicit Supabase tables, so every feature is observable, queryable, and tenant-isolated rather than hidden in ad-hoc in-memory logic.
+- Centralize advanced signal logic in `lib/advanced-intelligence.ts` to keep scoring-adjacent algorithms deterministic and reusable across route handlers (graph, adversarial, multimodal, simulation, AutoML, explainability).
+- Integrate dynamic thresholding directly into merchant config (`merchants.risk_threshold_review/block`) so transaction scoring consumes adaptive thresholds without introducing a second independent threshold source.
+- Treat contextual authentication as part of the scoring pipeline by auto-creating challenges on high-risk/step-up signals and exposing challenge lifecycle endpoints for analyst/automation resolution.
+- Use hash-based privacy-preserving cross-merchant signals plus hash-chain verification logs to deliver shared intelligence and immutable verification without exposing raw tenant data.

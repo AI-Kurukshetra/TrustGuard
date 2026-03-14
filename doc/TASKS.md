@@ -21,7 +21,7 @@
 - [x] 2026-03-14 10:35 Build primary dashboard views for monitoring, transactions, cases, rules, and alerts
 - [x] 2026-03-14 10:35 Add mock REST API endpoints for transaction scoring, device registration, alerts, and user risk profiles
 - [!] 2026-03-14 10:35 Resolve environment-specific Next.js production build failure (`EXDEV` on `.next` rename during static page output)
-- [~] Connect the UI and APIs to Supabase-backed persistence and auth (API auth now request-scoped via Supabase JWT; UI auth wiring pending)
+- [x] 2026-03-14 15:48 Connect the UI and APIs to Supabase-backed persistence and auth (operator session auth, API-key auth, and tenant-scoped dashboard/API reads now active)
 - [~] Add test coverage and CI checks for core fraud flows (unit test scaffolding added; sandbox runner issue on `vitest`)
 - [x] 2026-03-14 12:02 Add one-command pre-commit testing checklist (`npm run test:checklist`) with optional API smoke gate
 - [x] 2026-03-14 12:04 Fix Vitest alias resolution for `@/*` imports by adding explicit `vitest.config.ts`
@@ -51,3 +51,12 @@
 - [x] 2026-03-14 15:25 Phase R2: add model deployment control plane (active/challenger traffic split) and persist model assignment in scoring snapshots
 - [x] 2026-03-14 15:29 Add live execution tracking board in `doc/ROADMAP.md` for all 20 core + 12 advanced features with queue ordering
 - [x] 2026-03-14 15:33 Phase R2: add scheduled compliance automation APIs, composite user risk-profile refresh, and chargeback prevention playbook endpoint
+- [x] 2026-03-14 15:37 Improve TrustGuard branding logo with reusable mark/wordmark component and app icon
+- [x] 2026-03-14 15:39 Make dashboard sidebar sticky and improve navigation usability with grouped sections and quick-access links
+- [x] 2026-03-14 15:41 Add mobile collapsible sidebar drawer with menu toggle, overlay close, and escape-key support
+- [x] 2026-03-14 15:44 Add mobile sidebar slide animation and touch swipe-to-close interaction
+- [x] 2026-03-14 15:47 Fix `lib/advanced-intelligence.ts` strict TypeScript typing errors to restore full `pnpm typecheck` pass
+- [x] 2026-03-14 15:48 Phase R3: add graph risk-scoring APIs, channel ingestion/baselines, and historical analysis snapshots with anomaly/model-feedback outputs
+- [x] 2026-03-14 15:48 Complete advanced differentiator APIs: federated learning, synthetic fraud generation, explainability, cross-merchant intelligence, adversarial detection, dynamic thresholds, multimodal scoring, simulation, quantum-ready key rotation, blockchain verification, and AutoML runs
+- [x] 2026-03-14 15:48 Integrate contextual-auth challenge lifecycle (`/api/contextual-auth/challenges`) and scoring-triggered step-up challenge creation
+- [x] 2026-03-14 15:48 Update roadmap tracking board to reflect complete core + advanced feature coverage and post-completion hardening queue

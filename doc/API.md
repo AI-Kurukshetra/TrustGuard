@@ -510,3 +510,124 @@ Supports:
 Supports:
 
 - generate chargeback-prevention playbooks from transaction/risk signals
+
+### GET/POST `/api/graph/risk-score`
+
+Supports:
+
+- list persisted graph-risk findings (`GET`)
+- compute and upsert graph-risk findings from `entity_connections` + `risk_scores` (`POST`)
+
+### GET `/api/channels/baselines`
+
+Supports:
+
+- list channel-specific risk baselines (`web`, `mobile`, `api`, etc.)
+
+### POST `/api/channels/ingest`
+
+Supports:
+
+- ingest channel events
+- refresh `channel_risk_baselines`
+- optionally run `analyzeTransaction` with derived `channel_risk_score`
+
+### GET/POST `/api/analytics/historical`
+
+Supports:
+
+- list historical analysis snapshots (`GET`)
+- generate windowed historical snapshots with anomaly flags + model-feedback payloads (`POST`)
+
+### GET/POST `/api/contextual-auth/challenges`
+
+Supports:
+
+- list active/resolved contextual authentication challenges (`GET`)
+- create risk-driven challenges (`POST`)
+
+### PATCH `/api/contextual-auth/challenges/{id}/resolve`
+
+Supports:
+
+- resolve challenge status (`passed`, `failed`, `expired`)
+
+## Advanced Feature Endpoints
+
+### GET/POST `/api/advanced/federated-learning`
+
+Supports:
+
+- list federated learning rounds (`GET`)
+- create/update rounds with aggregation metadata (`POST`)
+
+### POST `/api/advanced/synthetic-fraud/generate`
+
+Supports:
+
+- generate synthetic fraud samples and persist generation batches
+
+### POST `/api/advanced/explainability`
+
+Supports:
+
+- compute factor-level explainability for risk decisions and persist reports
+
+### GET/POST `/api/advanced/cross-merchant/intelligence`
+
+Supports:
+
+- read hashed consortium intelligence aggregates (`GET`)
+- publish merchant signal hashes and return consortium prevalence (`POST`)
+
+### POST `/api/advanced/adversarial/detect`
+
+Supports:
+
+- detect adversarial payload patterns and persist detection records
+- optionally feed adversarial score into transaction scoring
+
+### POST `/api/advanced/dynamic-thresholds/recalculate`
+
+Role: `admin`
+
+Supports:
+
+- recompute and persist merchant `risk_threshold_review` + `risk_threshold_block` from live metrics
+
+### POST `/api/advanced/multimodal/analyze`
+
+Supports:
+
+- combine text/image/voice/behavior scores into one multimodal risk output
+- optionally run transaction scoring with `multimodal_risk_score`
+
+### POST `/api/advanced/simulation/run`
+
+Supports:
+
+- run fraud simulation scenarios and persist results
+
+### GET/POST `/api/advanced/cryptography/keys`
+
+Role: `admin` for `POST`
+
+Supports:
+
+- list hybrid quantum-ready key metadata (`GET`)
+- rotate and activate new key versions (`POST`)
+
+### POST `/api/advanced/blockchain/verify`
+
+Supports:
+
+- append immutable hash-chain verification records for entities
+
+### POST `/api/advanced/automl/run`
+
+Role: `admin`
+
+Supports:
+
+- run AutoML candidate selection from historical transactions
+- persist best model candidate and `automl_runs` output

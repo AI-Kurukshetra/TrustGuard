@@ -779,6 +779,95 @@ Merchant-scoped API keys for backend-to-backend ingestion (transactions, device 
 | `created_at` | `timestamptz` | default `now()` |
 | `updated_at` | `timestamptz` | default `now()` |
 
+### graph_risk_findings
+
+Persisted graph-analysis findings for suspicious connected clusters.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | primary key |
+| `merchant_id` | `uuid` | fk -> `merchants.id` |
+| `cluster_key` | `text` | unique cluster id per merchant |
+| `risk_score` | `integer` | 0-100 |
+| `entity_count` | `integer` | number of entities in cluster |
+| `connection_count` | `integer` | number of supporting edges |
+| `finding_payload` | `jsonb` | density, edge weights, sample relations |
+| `detected_at` | `timestamptz` | latest detection timestamp |
+| `created_at` | `timestamptz` | default `now()` |
+| `updated_at` | `timestamptz` | default `now()` |
+
+### channel_risk_baselines
+
+Channel-specific baseline metrics used by multi-channel detection.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | primary key |
+| `merchant_id` | `uuid` | fk -> `merchants.id` |
+| `channel` | `text` | web, mobile, api, pos, etc. |
+| `sample_count` | `integer` | lookback sample volume |
+| `avg_risk_score` | `numeric(6,2)` | baseline average score |
+| `block_rate_pct` | `numeric(6,2)` | baseline block ratio |
+| `review_rate_pct` | `numeric(6,2)` | baseline review ratio |
+| `last_event_at` | `timestamptz` | latest ingested event |
+| `metadata` | `jsonb` | lookback/source details |
+| `created_at` | `timestamptz` | default `now()` |
+| `updated_at` | `timestamptz` | default `now()` |
+
+### historical_risk_snapshots
+
+Windowed historical analysis outputs for trends, anomaly flags, and model feedback.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | primary key |
+| `merchant_id` | `uuid` | fk -> `merchants.id` |
+| `window_start` | `date` | analysis window start |
+| `window_end` | `date` | analysis window end |
+| `total_transactions` | `integer` | aggregate count |
+| `blocked_transactions` | `integer` | aggregate count |
+| `review_transactions` | `integer` | aggregate count |
+| `approved_transactions` | `integer` | aggregate count |
+| `avg_risk_score` | `numeric(6,2)` | aggregate risk |
+| `chargeback_count` | `integer` | aggregate count |
+| `anomaly_flags` | `jsonb` | anomaly marker array |
+| `model_feedback` | `jsonb` | retraining/trend suggestions |
+| `created_by` | `uuid` | fk -> `auth.users.id`, nullable |
+| `created_at` | `timestamptz` | default `now()` |
+
+### contextual_auth_challenges
+
+Risk-driven challenge orchestration (`step_up_auth`, risk-based MFA, etc.).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | primary key |
+| `merchant_id` | `uuid` | fk -> `merchants.id` |
+| `user_id` | `uuid` | fk -> `users.id`, nullable |
+| `transaction_id` | `uuid` | fk -> `transactions.id`, nullable |
+| `challenge_type` | `text` | `step_up_auth`, `risk_based_auth`, etc. |
+| `status` | `text` | `pending`, `passed`, `failed`, `expired` |
+| `expires_at` | `timestamptz` | challenge expiration |
+| `resolved_at` | `timestamptz` | resolution timestamp |
+| `context_payload` | `jsonb` | challenge context and resolution details |
+| `created_at` | `timestamptz` | default `now()` |
+| `updated_at` | `timestamptz` | default `now()` |
+
+### Advanced Intelligence Tables
+
+The advanced feature rollout is persisted in these tables:
+
+- `federated_learning_rounds`
+- `synthetic_fraud_batches`
+- `explainability_reports`
+- `cross_merchant_signals`
+- `adversarial_detections`
+- `multimodal_assessments`
+- `fraud_simulation_runs`
+- `quantum_crypto_keys`
+- `blockchain_verification_log`
+- `automl_runs`
+
 ## Relationship Summary
 
 - `merchants` 1 -> many `users`
@@ -795,6 +884,11 @@ Merchant-scoped API keys for backend-to-backend ingestion (transactions, device 
 - `merchants` 1 -> many `integration_api_keys`
 - `merchants` 1 -> many `model_deployments`
 - `merchants` 1 -> many `compliance_report_schedules`
+- `merchants` 1 -> many `graph_risk_findings`
+- `merchants` 1 -> many `channel_risk_baselines`
+- `merchants` 1 -> many `historical_risk_snapshots`
+- `merchants` 1 -> many `contextual_auth_challenges`
+- `merchants` 1 -> many advanced intelligence tables (`federated_learning_rounds`, `synthetic_fraud_batches`, `explainability_reports`, `cross_merchant_signals`, `adversarial_detections`, `multimodal_assessments`, `fraud_simulation_runs`, `quantum_crypto_keys`, `blockchain_verification_log`, `automl_runs`)
 - `users` 1 -> many `devices`
 - `users` 1 -> many `sessions`
 - `users` 1 -> many `payment_methods`
@@ -820,6 +914,8 @@ Merchant-scoped API keys for backend-to-backend ingestion (transactions, device 
 - check `risk_threshold_block >= risk_threshold_review`
 - check `challenger_traffic_percent between 0 and 100`
 - check `frequency in (daily, weekly, monthly)` for `compliance_report_schedules`
+- check `risk_score between 0 and 100` for `graph_risk_findings`, `adversarial_detections`, `multimodal_assessments`, and `explainability_reports`
+- check status values for `contextual_auth_challenges`, `federated_learning_rounds`, `fraud_simulation_runs`, and `automl_runs`
 
 ## Recommended RLS Strategy
 
