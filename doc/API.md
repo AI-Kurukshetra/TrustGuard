@@ -2,14 +2,16 @@
 
 ## Tenant Context
 
-Protected API routes require merchant scope.
+Protected API routes require:
 
-Use either:
+- `Authorization: Bearer <supabase_jwt>`
+- Merchant scope via `x-merchant-id` header or `merchant_id` payload
 
-- `x-merchant-id` request header
-- `merchant_id` field in request payload (for write routes)
+Role enforcement:
 
-If missing, APIs return `400`.
+- `viewer`: read endpoints
+- `analyst`: investigation and operational write endpoints
+- `admin`: policy/config endpoints
 
 ## Endpoints
 
@@ -205,3 +207,42 @@ Headers:
 - `x-merchant-id: <merchant_uuid>`
 
 Refreshes user-level `risk_score` by aggregating recent transaction risk scores.
+
+### GET `/api/auth/me`
+
+Returns authenticated user identity and active merchant memberships from Supabase auth token.
+
+### GET/POST `/api/rules`
+
+Supports:
+
+- list tenant risk rules
+- create risk rules (`admin`)
+
+### PATCH/DELETE `/api/rules/{id}`
+
+Supports:
+
+- update risk rule metadata/condition/action (`admin`)
+- delete tenant risk rule (`admin`)
+
+### GET/POST `/api/webhooks`
+
+Supports:
+
+- list webhook endpoints and recent deliveries
+- create webhook endpoint (`admin`)
+
+### PATCH/DELETE `/api/webhooks/{id}`
+
+Supports:
+
+- update endpoint target, events, activation (`admin`)
+- delete webhook endpoint (`admin`)
+
+### GET/POST `/api/compliance/reports`
+
+Supports:
+
+- list compliance reports for a tenant
+- create compliance report artifact (`admin`)

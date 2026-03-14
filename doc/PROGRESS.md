@@ -17,3 +17,4 @@
 [2026-03-14 11:46] codex — Added payment method validation and user risk profile refresh APIs to extend Sprint 2 trust-control coverage.
 [2026-03-14 11:52] codex — Added Vitest-based unit test scaffolding for rule evaluation and heuristic scoring; lint/typecheck pass, test run blocked in sandbox by `EAI_AGAIN localhost`.
 [2026-03-14 12:18] codex — Hardened API auth with bearer-token tenant membership checks, switched routes to request-scoped Supabase clients, and removed service-role fallback from request handling paths.
+[2026-03-14 12:34] codex — Added missing route groups for `/auth`, `/rules`, `/webhooks`, and `/compliance` with tenant-aware role enforcement and updated API docs.
