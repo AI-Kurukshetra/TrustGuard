@@ -1410,3 +1410,9 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
     };
   }
 }
+
+export const __internal = {
+  evaluateRuleCondition,
+  calculateHeuristicRisk,
+  selectFinalDecision
+};

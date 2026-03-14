@@ -19,4 +19,4 @@
 - [x] 2026-03-14 10:35 Add mock REST API endpoints for transaction scoring, device registration, alerts, and user risk profiles
 - [!] 2026-03-14 10:35 Resolve environment-specific Next.js production build failure (`EXDEV` on `.next` rename during static page output)
 - [ ] Connect the UI and APIs to Supabase-backed persistence and auth
-- [ ] Add test coverage and CI checks for core fraud flows
+- [~] Add test coverage and CI checks for core fraud flows (unit test scaffolding added; sandbox runner issue on `vitest`)
