@@ -92,6 +92,17 @@ interface RegisterDeviceInput {
   language?: string;
 }
 
+interface EntityListRecord {
+  id: string;
+  merchant_id: string;
+  list_type: "whitelist" | "blacklist";
+  entity_type: "user" | "transaction" | "device" | "session" | "payment_method" | "merchant";
+  entity_value: string;
+  reason?: string | null;
+  active: boolean;
+  created_at: string;
+}
+
 interface ActiveRuleRecord {
   id: string;
   rule_name: string;
@@ -312,6 +323,31 @@ function calculateHeuristicRisk(params: {
 
   return {
     normalizedScore: Math.min(100, score),
+    explanation
+  };
+}
+
+function adjustScoreForEntityLists(input: {
+  baseScore: number;
+  baseExplanation: string[];
+  whitelistMatch: boolean;
+  blacklistMatch: boolean;
+}) {
+  let score = input.baseScore;
+  const explanation = [...input.baseExplanation];
+
+  if (input.blacklistMatch) {
+    score = Math.min(100, score + 35);
+    explanation.push("blacklist_match");
+  }
+
+  if (input.whitelistMatch) {
+    score = Math.max(0, score - 25);
+    explanation.push("whitelist_match");
+  }
+
+  return {
+    normalizedScore: score,
     explanation
   };
 }
@@ -716,6 +752,109 @@ export async function getRiskProfileData(userId: string, merchantId?: string): P
   }
 }
 
+export async function getEntityListsData(merchantId: string, listType?: "whitelist" | "blacklist") {
+  if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv()) {
+    return [];
+  }
+
+  try {
+    const client = createSupabaseAdminClient();
+    let query = client
+      .from("entity_lists")
+      .select("id, merchant_id, list_type, entity_type, entity_value, reason, active, created_at")
+      .eq("merchant_id", merchantId)
+      .order("created_at", { ascending: false });
+
+    if (listType) {
+      query = query.eq("list_type", listType);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      throw error;
+    }
+
+    return (data ?? []) as EntityListRecord[];
+  } catch {
+    return [];
+  }
+}
+
+export async function upsertEntityListRecord(input: {
+  merchant_id: string;
+  list_type: "whitelist" | "blacklist";
+  entity_type: "user" | "transaction" | "device" | "session" | "payment_method" | "merchant";
+  entity_value: string;
+  reason?: string | null;
+  active?: boolean;
+}) {
+  if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv()) {
+    return { updated: false as const };
+  }
+
+  try {
+    const client = createSupabaseAdminClient();
+    const { data, error } = await client
+      .from("entity_lists")
+      .upsert(
+        {
+          merchant_id: input.merchant_id,
+          list_type: input.list_type,
+          entity_type: input.entity_type,
+          entity_value: input.entity_value,
+          reason: input.reason ?? null,
+          active: input.active ?? true
+        },
+        {
+          onConflict: "merchant_id,list_type,entity_type,entity_value"
+        }
+      )
+      .select("id, merchant_id, list_type, entity_type, entity_value, reason, active, created_at")
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return {
+      updated: true as const,
+      record: data as EntityListRecord
+    };
+  } catch {
+    return { updated: false as const };
+  }
+}
+
+export async function deleteEntityListRecord(input: {
+  merchant_id: string;
+  list_type: "whitelist" | "blacklist";
+  entity_type: "user" | "transaction" | "device" | "session" | "payment_method" | "merchant";
+  entity_value: string;
+}) {
+  if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv()) {
+    return { deleted: false as const };
+  }
+
+  try {
+    const client = createSupabaseAdminClient();
+    const { error } = await client
+      .from("entity_lists")
+      .delete()
+      .eq("merchant_id", input.merchant_id)
+      .eq("list_type", input.list_type)
+      .eq("entity_type", input.entity_type)
+      .eq("entity_value", input.entity_value);
+
+    if (error) {
+      throw error;
+    }
+
+    return { deleted: true as const };
+  } catch {
+    return { deleted: false as const };
+  }
+}
+
 export async function updateFraudCaseStatus(input: {
   merchant_id: string;
   case_id: string;
@@ -894,6 +1033,12 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
 
   try {
     const client = createSupabaseAdminClient();
+    const { data: entityListRows } = await client
+      .from("entity_lists")
+      .select("list_type, entity_type, entity_value")
+      .eq("merchant_id", input.merchant_id)
+      .eq("active", true)
+      .in("entity_type", ["user", "device"]);
 
     if (input.user_id) {
       const oneHourAgoIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -978,9 +1123,28 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
       loginGapMinutes
     });
     const normalizedDerivedScore = derivedRisk.normalizedScore;
+    const whitelistMatch = (entityListRows ?? []).some(
+      (item) =>
+        item.list_type === "whitelist" &&
+        ((item.entity_type === "user" && item.entity_value === input.user_id) ||
+          (item.entity_type === "device" && item.entity_value === input.device_id))
+    );
+    const blacklistMatch = (entityListRows ?? []).some(
+      (item) =>
+        item.list_type === "blacklist" &&
+        ((item.entity_type === "user" && item.entity_value === input.user_id) ||
+          (item.entity_type === "device" && item.entity_value === input.device_id))
+    );
+    const adjustedRisk = adjustScoreForEntityLists({
+      baseScore: normalizedDerivedScore,
+      baseExplanation: derivedRisk.explanation,
+      whitelistMatch,
+      blacklistMatch
+    });
+    const finalHeuristicScore = adjustedRisk.normalizedScore;
     const derivedHeuristicDecision =
-      normalizedDerivedScore >= 85 ? "block" : normalizedDerivedScore >= 60 ? "review" : "approve";
-    const derivedBaseExplanation = [...derivedRisk.explanation];
+      finalHeuristicScore >= 85 ? "block" : finalHeuristicScore >= 60 ? "review" : "approve";
+    const derivedBaseExplanation = [...adjustedRisk.explanation];
 
     const activeRules = await fetchActiveRuleRecords(client, input.merchant_id);
     const context = buildRuleContext();
@@ -1005,7 +1169,7 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
         amount,
         currency: input.currency ?? "USD",
         status: transactionStatus,
-        risk_score: normalizedDerivedScore,
+        risk_score: finalHeuristicScore,
         recommended_action: finalDecision === "approve" ? "allow" : finalDecision,
         channel: input.channel ?? "web",
         payment_provider: input.payment_provider ?? null,
@@ -1034,7 +1198,7 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
       entity_type: "transaction",
       entity_id: transactionRow.id,
       transaction_id: transactionRow.id,
-      score: normalizedDerivedScore,
+      score: finalHeuristicScore,
       recommended_action: finalDecision === "approve" ? "allow" : finalDecision,
       reasons: explanation,
       feature_snapshot: {
@@ -1098,7 +1262,7 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
         event_type: eventType,
         merchant_id: input.merchant_id,
         transaction_id: transactionRow.id,
-        risk_score: normalizedDerivedScore,
+        risk_score: finalHeuristicScore,
         decision: finalDecision,
         matched_rules: matchedRuleNames,
         alert_id: alertId ?? null,
@@ -1190,7 +1354,7 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
 
     return {
       transaction_id: transactionRow.id,
-      risk_score: normalizedDerivedScore,
+      risk_score: finalHeuristicScore,
       decision: finalDecision,
       explanation,
       matched_rules: matchedRuleNames,

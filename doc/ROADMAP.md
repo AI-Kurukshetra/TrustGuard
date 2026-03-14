@@ -150,7 +150,7 @@ Legend:
 | 11 | Machine Learning Model Management | In Progress | Sprint 2 |
 | 12 | Identity Verification | In Progress | Sprint 2 |
 | 13 | Graph Analysis | Planned | Sprint 3 |
-| 14 | Whitelist/Blacklist Management | Planned | Sprint 2 |
+| 14 | Whitelist/Blacklist Management | In Progress | Sprint 2 |
 | 15 | API Integration Framework | In Progress | Sprint 1 |
 | 16 | Compliance Reporting | In Progress | Sprint 3 |
 | 17 | Multi-channel Fraud Detection | Planned | Sprint 3 |

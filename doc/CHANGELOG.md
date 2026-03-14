@@ -15,3 +15,5 @@
 - Added DB-derived velocity windows (`velocity_1h`, `velocity_24h`) and geolocation enrichment (country mismatch and impossible-travel speed checks) into scoring decisions.
 - Added tenant-scoped API request enforcement, auto-created alerts/cases from scoring outcomes, webhook delivery logging, and a case status transition endpoint with event audit trail.
 - Added `doc/API.md` with current endpoint contracts and required tenant context conventions.
+- Added whitelist/blacklist management (`entity_lists`) with schema migration, API CRUD, and scoring-time list match adjustments.
+- Added basic model registry, identity verification ingest/query, and session behavioral biometrics APIs as Sprint 2 foundations.

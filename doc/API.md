@@ -121,3 +121,39 @@ Behavior:
 - updates `fraud_cases.status`
 - sets `resolved_at` for `resolved`
 - writes audit event to `fraud_case_events`
+
+### GET/POST/DELETE `/api/entity-lists`
+
+Headers:
+
+- `x-merchant-id: <merchant_uuid>`
+
+Supports:
+
+- fetch whitelist/blacklist records
+- upsert list records (`list_type`, `entity_type`, `entity_value`)
+- delete list records
+
+### GET/POST `/api/models`
+
+Headers:
+
+- `x-merchant-id: <merchant_uuid>`
+
+Supports basic model registry operations for tenant-level model metadata.
+
+### GET/POST `/api/identity-verifications`
+
+Headers:
+
+- `x-merchant-id: <merchant_uuid>`
+
+Supports ingest and retrieval of identity verification records.
+
+### PATCH `/api/sessions/{id}/behavior`
+
+Headers:
+
+- `x-merchant-id: <merchant_uuid>`
+
+Stores behavioral biometrics payloads on a session record.
