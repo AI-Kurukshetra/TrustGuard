@@ -13,3 +13,5 @@
 - Added `doc/ROADMAP.md` defining three sprint phases, feature mapping for all 20 core capabilities, and commit conventions for ongoing implementation.
 - Upgraded transaction scoring to execute active `risk_rules`, compute decision overrides by rule priority/severity, and persist evaluation traces in `rule_executions`.
 - Added DB-derived velocity windows (`velocity_1h`, `velocity_24h`) and geolocation enrichment (country mismatch and impossible-travel speed checks) into scoring decisions.
+- Added tenant-scoped API request enforcement, auto-created alerts/cases from scoring outcomes, webhook delivery logging, and a case status transition endpoint with event audit trail.
+- Added `doc/API.md` with current endpoint contracts and required tenant context conventions.

@@ -76,6 +76,8 @@ interface AnalyzeTransactionResult {
   explanation: string[];
   matched_rules: string[];
   persisted: boolean;
+  alert_id?: string;
+  case_id?: string;
 }
 
 interface RegisterDeviceInput {
@@ -99,6 +101,7 @@ interface ActiveRuleRecord {
 }
 
 type SupportedDecision = AnalyzeTransactionResult["decision"];
+type CaseStatus = "open" | "in_review" | "escalated" | "resolved";
 
 function getReadClient(): SupabaseClientLike {
   if (hasSupabaseServiceRoleEnv()) {
@@ -398,11 +401,17 @@ async function fetchTransactions(client: SupabaseClientLike) {
   );
 }
 
-async function fetchAlerts(client: SupabaseClientLike) {
-  const { data, error } = await client
+async function fetchAlerts(client: SupabaseClientLike, merchantId?: string) {
+  let query = client
     .from("alerts")
     .select("id, alert_type, severity, entity_id, created_at, summary")
     .order("created_at", { ascending: false });
+
+  if (merchantId) {
+    query = query.eq("merchant_id", merchantId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw error;
@@ -611,13 +620,13 @@ export async function getRiskRulesData() {
   }
 }
 
-export async function getAlertsData() {
+export async function getAlertsData(merchantId?: string) {
   if (!hasSupabaseEnv()) {
     return mockAlerts;
   }
 
   try {
-    return await fetchAlerts(getReadClient());
+    return await fetchAlerts(getReadClient(), merchantId);
   } catch {
     return mockAlerts;
   }
@@ -656,17 +665,34 @@ export async function getDashboardData(): Promise<DashboardData> {
   }
 }
 
-export async function getRiskProfileData(userId: string): Promise<RiskProfile | null> {
+export async function getRiskProfileData(userId: string, merchantId?: string): Promise<RiskProfile | null> {
   if (!hasSupabaseEnv()) {
     return getMockRiskProfile(userId);
   }
 
   try {
     const client = getReadClient();
-    const users = await fetchUsers(client);
+    let users = await fetchUsers(client);
+    if (merchantId) {
+      const { data: scopedUsers } = await client
+        .from("users")
+        .select("id, email, risk_score, created_at, home_country")
+        .eq("merchant_id", merchantId)
+        .eq("id", userId)
+        .limit(1);
+      users =
+        (scopedUsers ?? []).map((row) => ({
+          id: row.id,
+          email: row.email ?? "unknown@trustguard.local",
+          riskScore: row.risk_score ?? 0,
+          createdAt: row.created_at,
+          region: row.home_country ?? "Unknown",
+          velocity24h: 0
+        })) ?? [];
+    }
     const devices = await fetchDevices(client);
     const transactions = await fetchTransactions(client);
-    const alerts = await fetchAlerts(client);
+    const alerts = await fetchAlerts(client, merchantId);
     const user = users.find((item) => item.id === userId);
 
     if (!user) {
@@ -687,6 +713,56 @@ export async function getRiskProfileData(userId: string): Promise<RiskProfile | 
     };
   } catch {
     return getMockRiskProfile(userId);
+  }
+}
+
+export async function updateFraudCaseStatus(input: {
+  merchant_id: string;
+  case_id: string;
+  status: CaseStatus;
+  actor_id?: string | null;
+  note?: string | null;
+}) {
+  if (!hasSupabaseEnv() || !hasSupabaseServiceRoleEnv()) {
+    return { updated: false as const };
+  }
+
+  try {
+    const client = createSupabaseAdminClient();
+    const resolvedAt = input.status === "resolved" ? new Date().toISOString() : null;
+    const { data: fraudCase, error } = await client
+      .from("fraud_cases")
+      .update({
+        status: input.status,
+        resolved_at: resolvedAt,
+        resolution_notes: input.note ?? null
+      })
+      .eq("id", input.case_id)
+      .eq("merchant_id", input.merchant_id)
+      .select("id, status")
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    await client.from("fraud_case_events").insert({
+      merchant_id: input.merchant_id,
+      fraud_case_id: input.case_id,
+      actor_id: input.actor_id ?? null,
+      event_type: "status_changed",
+      event_payload: {
+        status: input.status,
+        note: input.note ?? null
+      }
+    });
+
+    return {
+      updated: true as const,
+      fraud_case: fraudCase
+    };
+  } catch {
+    return { updated: false as const };
   }
 }
 
@@ -974,6 +1050,126 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
       }
     });
 
+    let alertId: string | undefined;
+    let caseId: string | undefined;
+    if (finalDecision === "review" || finalDecision === "block") {
+      const alertSeverity = finalDecision === "block" ? "critical" : "high";
+      const alertType = finalDecision === "block" ? "Blocked Transaction" : "Transaction Review Required";
+      const { data: alertRow } = await client
+        .from("alerts")
+        .insert({
+          merchant_id: input.merchant_id,
+          entity_type: "transaction",
+          entity_id: transactionRow.id,
+          transaction_id: transactionRow.id,
+          alert_type: alertType,
+          severity: alertSeverity,
+          title: alertType,
+          summary: explanation.join(", "),
+          delivery_channels: ["dashboard", "webhook"]
+        })
+        .select("id")
+        .single();
+      alertId = alertRow?.id;
+
+      const { data: fraudCaseRow } = await client
+        .from("fraud_cases")
+        .insert({
+          merchant_id: input.merchant_id,
+          transaction_id: transactionRow.id,
+          user_id: input.user_id ?? null,
+          status: finalDecision === "block" ? "escalated" : "open",
+          outcome: "pending",
+          priority: finalDecision === "block" ? 1 : 2,
+          source_alert_id: alertId ?? null,
+          source_reason: finalDecision === "block" ? "high_risk_block" : "manual_review_required",
+          analyst_notes: `Auto-created from risk scoring. Decision: ${finalDecision}.`
+        })
+        .select("id")
+        .single();
+      caseId = fraudCaseRow?.id;
+
+      if (alertId && caseId) {
+        await client.from("alerts").update({ fraud_case_id: caseId }).eq("id", alertId);
+      }
+
+      const eventType = finalDecision === "block" ? "transaction.blocked" : "transaction.review";
+      const eventPayload = {
+        event_type: eventType,
+        merchant_id: input.merchant_id,
+        transaction_id: transactionRow.id,
+        risk_score: normalizedDerivedScore,
+        decision: finalDecision,
+        matched_rules: matchedRuleNames,
+        alert_id: alertId ?? null,
+        case_id: caseId ?? null
+      };
+
+      const { data: endpoints } = await client
+        .from("webhook_endpoints")
+        .select("id, target_url, secret_hash, subscribed_events")
+        .eq("merchant_id", input.merchant_id)
+        .eq("active", true);
+
+      for (const endpoint of endpoints ?? []) {
+        const subscribedEvents = (endpoint.subscribed_events ?? []) as string[];
+        if (
+          subscribedEvents.length > 0 &&
+          !subscribedEvents.includes(eventType) &&
+          !subscribedEvents.includes("alert.created")
+        ) {
+          continue;
+        }
+
+        const { data: delivery } = await client
+          .from("webhook_deliveries")
+          .insert({
+            webhook_endpoint_id: endpoint.id,
+            event_type: eventType,
+            payload: eventPayload,
+            status: "pending",
+            attempt_count: 0
+          })
+          .select("id")
+          .single();
+
+        if (!delivery) {
+          continue;
+        }
+
+        try {
+          const response = await fetch(endpoint.target_url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-TrustGuard-Signature": endpoint.secret_hash
+            },
+            body: JSON.stringify(eventPayload)
+          });
+
+          await client
+            .from("webhook_deliveries")
+            .update({
+              status: response.ok ? "delivered" : "retrying",
+              response_code: response.status,
+              attempt_count: 1,
+              last_attempted_at: new Date().toISOString(),
+              delivered_at: response.ok ? new Date().toISOString() : null
+            })
+            .eq("id", delivery.id);
+        } catch {
+          await client
+            .from("webhook_deliveries")
+            .update({
+              status: "retrying",
+              attempt_count: 1,
+              last_attempted_at: new Date().toISOString()
+            })
+            .eq("id", delivery.id);
+        }
+      }
+    }
+
     if (activeRules.length > 0) {
       const executionRows = activeRules.map((rule) => {
         const matchedRule = matchedRules.find((item) => item.id === rule.id);
@@ -998,7 +1194,9 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
       decision: finalDecision,
       explanation,
       matched_rules: matchedRuleNames,
-      persisted: true
+      persisted: true,
+      alert_id: alertId,
+      case_id: caseId
     };
   } catch {
     return {

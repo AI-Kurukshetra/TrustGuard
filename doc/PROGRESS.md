@@ -11,3 +11,4 @@
 [2026-03-14 11:03] codex — Added `doc/ROADMAP.md` with sprint-by-sprint feature delivery plan, acceptance criteria, and commit discipline linked to the 20 core features.
 [2026-03-14 11:08] codex — Implemented runtime risk rule evaluation in transaction scoring and persisted execution audit rows to `rule_executions`.
 [2026-03-14 11:12] codex — Added derived velocity windows (1h/24h) and impossible-travel geolocation enrichment to transaction scoring before persistence.
+[2026-03-14 11:22] codex — Added alert/case creation from high-risk decisions, webhook delivery persistence, tenant-scoped API enforcement, case lifecycle update endpoint, and API contract docs.
