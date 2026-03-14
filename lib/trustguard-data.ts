@@ -10,7 +10,16 @@ import {
 } from "@/lib/mock-data";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { Alert, DashboardMetric, Device, FraudCase, RiskRule, Transaction, User } from "@/lib/types";
+import {
+  Alert,
+  DashboardMetric,
+  Device,
+  FraudCase,
+  KpiSummary,
+  RiskRule,
+  Transaction,
+  User
+} from "@/lib/types";
 
 type SupabaseClientLike = ReturnType<typeof createSupabaseServerClient>;
 
@@ -583,6 +592,66 @@ function computeMetrics(transactions: Transaction[], fraudCases: FraudCase[]): D
   ];
 }
 
+function safePercent(numerator: number, denominator: number) {
+  if (denominator <= 0) {
+    return 0;
+  }
+  return Number(((numerator / denominator) * 100).toFixed(2));
+}
+
+function average(values: number[]) {
+  if (values.length === 0) {
+    return 0;
+  }
+  const total = values.reduce((sum, value) => sum + value, 0);
+  return Number((total / values.length).toFixed(2));
+}
+
+function percentile(values: number[], percentileValue: number) {
+  if (values.length === 0) {
+    return 0;
+  }
+  const sorted = [...values].sort((left, right) => left - right);
+  const index = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.ceil((percentileValue / 100) * sorted.length) - 1)
+  );
+  return sorted[index] ?? 0;
+}
+
+function fallbackKpiSummary(): KpiSummary {
+  const blockedCount = mockTransactions.filter((transaction) => transaction.status === "blocked").length;
+  const reviewCount = mockTransactions.filter((transaction) => transaction.status === "review").length;
+  const predictedFraudCount = blockedCount + reviewCount;
+  const estimatedTruePositives = blockedCount;
+  const estimatedFalsePositives = Math.max(predictedFraudCount - estimatedTruePositives, 0);
+  const estimatedFalseNegatives = 0;
+
+  return {
+    falsePositiveRatePct: safePercent(
+      estimatedFalsePositives,
+      estimatedTruePositives + estimatedFalsePositives
+    ),
+    falseNegativeRatePct: safePercent(
+      estimatedFalseNegatives,
+      estimatedTruePositives + estimatedFalseNegatives
+    ),
+    estimatedPrecisionPct: safePercent(estimatedTruePositives, predictedFraudCount),
+    estimatedRecallPct: 100,
+    transactionLatencyMsAvg: 0,
+    transactionLatencyMsP95: 0,
+    apiUptimePct: 0,
+    revenueProtectedAmount: Number(
+      mockTransactions
+        .filter((transaction) => transaction.status === "blocked")
+        .reduce((sum, transaction) => sum + transaction.amount, 0)
+        .toFixed(2)
+    ),
+    complianceAuditSuccessRatePct: 100,
+    modelDriftSignal: "insufficient_data"
+  };
+}
+
 export async function getUsersData() {
   if (!hasSupabaseEnv()) {
     return mockUsers;
@@ -715,6 +784,110 @@ export async function getDashboardData(): Promise<DashboardData> {
       metrics: mockDashboardMetrics,
       transactions: mockTransactions
     };
+  }
+}
+
+export async function getDashboardKpiSummaryData(days = 30): Promise<KpiSummary> {
+  if (!hasSupabaseEnv()) {
+    return fallbackKpiSummary();
+  }
+
+  try {
+    const clampedDays = Math.min(365, Math.max(1, Math.round(days)));
+    const sinceTimestamp = new Date(Date.now() - clampedDays * 24 * 60 * 60 * 1000).toISOString();
+    const db = getReadClient();
+
+    const [transactionsRes, chargebacksRes, apiMetricsRes, complianceRes, modelRes] = await Promise.all([
+      db
+        .from("transactions")
+        .select("status, amount")
+        .gte("occurred_at", sinceTimestamp),
+      db
+        .from("chargebacks")
+        .select("id", { count: "exact", head: true })
+        .gte("received_at", sinceTimestamp),
+      db
+        .from("api_request_metrics")
+        .select("status_code, duration_ms")
+        .gte("created_at", sinceTimestamp),
+      db
+        .from("compliance_reports")
+        .select("status, generated_at")
+        .gte("created_at", sinceTimestamp),
+      db
+        .from("ml_models")
+        .select("status, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+    ]);
+
+    if (
+      transactionsRes.error ||
+      chargebacksRes.error ||
+      apiMetricsRes.error ||
+      complianceRes.error ||
+      modelRes.error
+    ) {
+      throw new Error("kpi_query_failed");
+    }
+
+    const transactions = transactionsRes.data ?? [];
+    const blockedTransactions = transactions.filter((item) => item.status === "blocked").length;
+    const reviewTransactions = transactions.filter((item) => item.status === "review").length;
+    const predictedFraudCount = blockedTransactions + reviewTransactions;
+    const actualFraudCount = chargebacksRes.count ?? 0;
+    const estimatedTruePositives = Math.min(predictedFraudCount, actualFraudCount);
+    const estimatedFalsePositives = Math.max(predictedFraudCount - estimatedTruePositives, 0);
+    const estimatedFalseNegatives = Math.max(actualFraudCount - estimatedTruePositives, 0);
+
+    const apiMetrics = apiMetricsRes.data ?? [];
+    const latencySamples = apiMetrics
+      .map((item) => Number(item.duration_ms))
+      .filter((value) => Number.isFinite(value) && value >= 0);
+    const apiSuccessCount = apiMetrics.filter((item) => Number(item.status_code) < 500).length;
+
+    const complianceReports = complianceRes.data ?? [];
+    const successfulComplianceReports = complianceReports.filter(
+      (item) => item.status === "generated" && item.generated_at !== null
+    ).length;
+
+    const revenueProtectedAmount = Number(
+      transactions
+        .filter((item) => item.status === "blocked")
+        .reduce((sum, item) => sum + Number(item.amount ?? 0), 0)
+        .toFixed(2)
+    );
+
+    const latestModel = modelRes.data?.[0] ?? null;
+    const modelDriftSignal: KpiSummary["modelDriftSignal"] = latestModel
+      ? latestModel.status === "active"
+        ? "stable"
+        : "attention"
+      : "insufficient_data";
+
+    return {
+      falsePositiveRatePct: safePercent(
+        estimatedFalsePositives,
+        estimatedTruePositives + estimatedFalsePositives
+      ),
+      falseNegativeRatePct: safePercent(
+        estimatedFalseNegatives,
+        estimatedTruePositives + estimatedFalseNegatives
+      ),
+      estimatedPrecisionPct: safePercent(estimatedTruePositives, predictedFraudCount),
+      estimatedRecallPct: safePercent(estimatedTruePositives, actualFraudCount),
+      transactionLatencyMsAvg: average(latencySamples),
+      transactionLatencyMsP95: percentile(latencySamples, 95),
+      apiUptimePct: safePercent(apiSuccessCount, apiMetrics.length),
+      revenueProtectedAmount,
+      complianceAuditSuccessRatePct: safePercent(
+        successfulComplianceReports,
+        complianceReports.length
+      ),
+      modelDriftSignal
+    };
+  } catch {
+    return fallbackKpiSummary();
   }
 }
 

@@ -36,3 +36,4 @@
 - Added `lib/api-metrics.ts` and instrumented key endpoints (`transactions/analyze`, `alerts`, `analytics/summary`, `reports/generate`, `users/[id]/risk-profile`) for latency and status tracking.
 - Added `/api/reports/kpis` to compute KPI summaries (precision/recall estimates, latency, uptime, revenue protected, compliance success, model drift signal) from live merchant data.
 - Updated API and schema docs (`doc/API.md`, `doc/SCHEMA.md`) to include KPI endpoint and `api_request_metrics` table.
+- Added dashboard KPI pulse UI on `app/(dashboard)/page.tsx` and new `getDashboardKpiSummaryData()` server data path in `lib/trustguard-data.ts` to surface business metrics in the main command center.

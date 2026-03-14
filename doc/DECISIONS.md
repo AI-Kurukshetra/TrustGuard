@@ -19,3 +19,4 @@
 - Track API SLO and KPI inputs in a dedicated `api_request_metrics` table (tenant-scoped, RLS-protected) to support operational reporting without coupling to app logs.
 - KPI endpoint should return explicit assumptions when precision/recall or drift are estimated from proxy signals, rather than implying label-quality certainty.
 - Start GTM/pricing execution artifacts as first-class repo docs (`PRICING`, `GTM`, `DIFFERENTIATION_BACKLOG`) so commercial decisions evolve alongside product implementation.
+- Surface KPI telemetry directly on the primary dashboard view so risk operators and business stakeholders see the same operational health signals without switching contexts.

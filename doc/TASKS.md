@@ -34,3 +34,4 @@
 - [x] 2026-03-14 13:41 Add business execution docs for pricing, GTM, and differentiation backlog
 - [x] 2026-03-14 13:41 Implement KPI instrumentation foundation (`api_request_metrics` migration + metric logger + `/api/reports/kpis` endpoint)
 - [x] 2026-03-14 13:41 Push KPI migration to Supabase and validate live KPI endpoint response with authenticated merchant user
+- [x] 2026-03-14 13:49 Add dashboard KPI pulse widget wired to server-side KPI summary data

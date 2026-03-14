@@ -2,13 +2,16 @@ import { PageShell } from "@/components/page-shell";
 import { RiskBadge } from "@/components/risk-badge";
 import { SectionCard } from "@/components/section-card";
 import { StatCard } from "@/components/stat-card";
-import { getDashboardData } from "@/lib/trustguard-data";
+import { getDashboardData, getDashboardKpiSummaryData } from "@/lib/trustguard-data";
 import { formatCurrency, formatTimestamp } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const { alerts, fraudCases, metrics, transactions } = await getDashboardData();
+  const [{ alerts, fraudCases, metrics, transactions }, kpis] = await Promise.all([
+    getDashboardData(),
+    getDashboardKpiSummaryData(30)
+  ]);
 
   return (
     <PageShell
@@ -21,6 +24,40 @@ export default async function DashboardPage() {
           <StatCard key={metric.label} metric={metric} />
         ))}
       </div>
+
+      <SectionCard title="KPI pulse (30d)" eyebrow="Business telemetry">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="text-xs uppercase tracking-[0.14em] text-slate-400">Precision</div>
+            <div className="mt-2 text-2xl font-semibold text-white">{kpis.estimatedPrecisionPct}%</div>
+            <div className="mt-1 text-xs text-slate-400">Estimated from decisions vs chargebacks</div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="text-xs uppercase tracking-[0.14em] text-slate-400">Recall</div>
+            <div className="mt-2 text-2xl font-semibold text-white">{kpis.estimatedRecallPct}%</div>
+            <div className="mt-1 text-xs text-slate-400">Estimated detection coverage</div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="text-xs uppercase tracking-[0.14em] text-slate-400">Latency p95</div>
+            <div className="mt-2 text-2xl font-semibold text-white">{kpis.transactionLatencyMsP95}ms</div>
+            <div className="mt-1 text-xs text-slate-400">API request telemetry</div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="text-xs uppercase tracking-[0.14em] text-slate-400">API Uptime</div>
+            <div className="mt-2 text-2xl font-semibold text-white">{kpis.apiUptimePct}%</div>
+            <div className="mt-1 text-xs text-slate-400">5xx error budget proxy</div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="text-xs uppercase tracking-[0.14em] text-slate-400">Protected Value</div>
+            <div className="mt-2 text-2xl font-semibold text-white">
+              {formatCurrency(kpis.revenueProtectedAmount, "USD")}
+            </div>
+            <div className="mt-1 text-xs text-slate-400">
+              Drift: <span className="capitalize">{kpis.modelDriftSignal}</span>
+            </div>
+          </div>
+        </div>
+      </SectionCard>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <SectionCard title="Live transaction queue" eyebrow="Scoring">

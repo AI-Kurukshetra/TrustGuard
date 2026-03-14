@@ -70,3 +70,16 @@ export interface DashboardMetric {
   delta: string;
   tone: "neutral" | "positive" | "warning";
 }
+
+export interface KpiSummary {
+  falsePositiveRatePct: number;
+  falseNegativeRatePct: number;
+  estimatedPrecisionPct: number;
+  estimatedRecallPct: number;
+  transactionLatencyMsAvg: number;
+  transactionLatencyMsP95: number;
+  apiUptimePct: number;
+  revenueProtectedAmount: number;
+  complianceAuditSuccessRatePct: number;
+  modelDriftSignal: "stable" | "attention" | "insufficient_data";
+}
