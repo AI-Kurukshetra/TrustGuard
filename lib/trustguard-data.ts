@@ -51,6 +51,9 @@ interface AnalyzeTransactionInput {
   login_gap_minutes?: number;
   latitude?: number;
   longitude?: number;
+  failed_login_count?: number;
+  chargeback_history_count?: number;
+  payment_method_validated?: boolean;
   user_in_whitelist?: boolean;
   device_trust_score?: number;
   merchant_id?: string;
@@ -292,6 +295,9 @@ function calculateHeuristicRisk(params: {
   geoMismatch: boolean;
   travelSpeedKmh: number;
   loginGapMinutes: number;
+  failedLoginCount: number;
+  chargebackHistoryCount: number;
+  paymentMethodValidated: boolean;
 }) {
   let score = 10;
   const explanation: string[] = [];
@@ -319,6 +325,21 @@ function calculateHeuristicRisk(params: {
   if (params.travelSpeedKmh > 900 && params.loginGapMinutes > 0 && params.loginGapMinutes < 45) {
     score += 20;
     explanation.push("impossible_travel");
+  }
+
+  if (params.failedLoginCount >= 3) {
+    score += 18;
+    explanation.push("failed_login_burst");
+  }
+
+  if (params.chargebackHistoryCount >= 2) {
+    score += 12;
+    explanation.push("chargeback_history");
+  }
+
+  if (!params.paymentMethodValidated) {
+    score += 10;
+    explanation.push("payment_method_unvalidated");
   }
 
   return {
@@ -975,6 +996,9 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
   let geoMismatch = Boolean(input.geo_mismatch);
   let travelSpeedKmh = Number(input.travel_speed_kmh ?? 0);
   let loginGapMinutes = Number(input.login_gap_minutes ?? 0);
+  const failedLoginCount = Number(input.failed_login_count ?? 0);
+  const chargebackHistoryCount = Number(input.chargeback_history_count ?? 0);
+  const paymentMethodValidated = Boolean(input.payment_method_validated ?? false);
   const userInWhitelist = Boolean(input.user_in_whitelist);
   const deviceTrustScore = Number(input.device_trust_score ?? 0);
   const currentLatitude = input.latitude !== undefined ? Number(input.latitude) : null;
@@ -986,7 +1010,10 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
     velocity1h: velocityCount1h,
     geoMismatch,
     travelSpeedKmh,
-    loginGapMinutes
+    loginGapMinutes,
+    failedLoginCount,
+    chargebackHistoryCount,
+    paymentMethodValidated
   });
   const normalizedScore = baseRisk.normalizedScore;
   const heuristicDecision = normalizedScore >= 85 ? "block" : normalizedScore >= 60 ? "review" : "approve";
@@ -1000,6 +1027,9 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
     geo_mismatch: geoMismatch,
     travel_speed_kmh: travelSpeedKmh,
     login_gap_minutes: loginGapMinutes,
+    failed_login_count: failedLoginCount,
+    chargeback_history_count: chargebackHistoryCount,
+    payment_method_validated: paymentMethodValidated,
     user_in_whitelist: userInWhitelist,
     device_trust_score: deviceTrustScore
   });
@@ -1120,7 +1150,10 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
       velocity1h: velocityCount1h,
       geoMismatch,
       travelSpeedKmh,
-      loginGapMinutes
+      loginGapMinutes,
+      failedLoginCount,
+      chargebackHistoryCount,
+      paymentMethodValidated
     });
     const normalizedDerivedScore = derivedRisk.normalizedScore;
     const whitelistMatch = (entityListRows ?? []).some(
@@ -1182,6 +1215,7 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
         velocity_24h: velocityCount24h,
         is_new_device: isNewDevice,
         geo_mismatch: geoMismatch,
+        chargeback_risk_score: Math.min(100, Math.max(0, Math.round(normalizedDerivedScore * 0.8))),
         decision_reason: explanation.join(", "),
         risk_factors: explanation,
         raw_payload: input.raw_payload ?? {}
@@ -1209,6 +1243,9 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
         geo_mismatch: geoMismatch,
         travel_speed_kmh: travelSpeedKmh,
         login_gap_minutes: loginGapMinutes,
+        failed_login_count: failedLoginCount,
+        chargeback_history_count: chargebackHistoryCount,
+        payment_method_validated: paymentMethodValidated,
         user_in_whitelist: userInWhitelist,
         device_trust_score: deviceTrustScore
       }

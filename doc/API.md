@@ -189,3 +189,19 @@ Headers:
 - `x-merchant-id: <merchant_uuid>`
 
 Materializes `user -> device` and `user -> payment_method` connections into `entity_connections`.
+
+### POST `/api/payment-methods/validate`
+
+Headers:
+
+- `x-merchant-id: <merchant_uuid>`
+
+Validates payment method payloads using current adapter heuristics and updates `payment_methods.validation_status` when `payment_method_id` is provided.
+
+### POST `/api/users/risk-profile/refresh`
+
+Headers:
+
+- `x-merchant-id: <merchant_uuid>`
+
+Refreshes user-level `risk_score` by aggregating recent transaction risk scores.

@@ -143,7 +143,7 @@ Legend:
 | 4 | Geolocation Analysis | In Progress | Sprint 1 |
 | 5 | Behavioral Biometrics | Planned | Sprint 2 |
 | 6 | Account Takeover Detection | In Progress | Sprint 2 |
-| 7 | Payment Method Validation | Planned | Sprint 2 |
+| 7 | Payment Method Validation | In Progress | Sprint 2 |
 | 8 | Risk Rules Engine | In Progress | Sprint 1 |
 | 9 | Fraud Case Management | In Progress | Sprint 1 |
 | 10 | Real-time Alerts and Notifications | In Progress | Sprint 1 |

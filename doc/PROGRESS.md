@@ -14,3 +14,4 @@
 [2026-03-14 11:22] codex — Added alert/case creation from high-risk decisions, webhook delivery persistence, tenant-scoped API enforcement, case lifecycle update endpoint, and API contract docs.
 [2026-03-14 11:31] codex — Added `entity_lists` schema + CRUD APIs, wired whitelist/blacklist matches into scoring adjustments, and added model, identity-verification, and session biometrics APIs.
 [2026-03-14 11:39] codex — Added Sprint 3 foundation pieces: `daily_risk_metrics` and `entity_connections` schema, analytics refresh/summary APIs, compliance report generation API, and graph materialization API.
+[2026-03-14 11:46] codex — Added payment method validation and user risk profile refresh APIs to extend Sprint 2 trust-control coverage.
