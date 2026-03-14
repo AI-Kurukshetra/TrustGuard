@@ -30,6 +30,37 @@ export function ApiKeyManager({ merchantId, initialKeys }: ApiKeyManagerProps) {
       `curl -X POST "$BASE_URL/api/transactions/analyze" \\\n+  -H "x-api-key: ${sampleKey}" \\\n+  -H "x-merchant-id: ${merchantId}" \\\n+  -H "Content-Type: application/json" \\\n+  -d '{"amount":249.99,"currency":"USD","user_id":"external-123","country_code":"US"}'`,
     [merchantId, sampleKey]
   );
+  const jsAgentExample = useMemo(
+    () =>
+      `import { TrustGuardJsAgent } from "@/lib/integrations/trustguard-js-agent";
+
+const trustguard = new TrustGuardJsAgent({
+  baseUrl: process.env.TRUSTGUARD_BASE_URL!,
+  apiKey: process.env.TRUSTGUARD_API_KEY!,
+  merchantId: "${merchantId}",
+  timeoutMs: 5000,
+  retries: 2
+});
+
+const { analysis } = await trustguard.scorePayment({
+  device: {
+    user_id: "external-123",
+    browser: "Chrome",
+    os: "Windows"
+  },
+  transaction: {
+    amount: 249.99,
+    currency: "USD",
+    user_id: "external-123",
+    country_code: "US"
+  }
+});
+
+if (analysis.decision === "block") {
+  // deny authorization
+}`,
+    [merchantId]
+  );
 
   async function createKey() {
     setIsSubmitting(true);
@@ -131,6 +162,12 @@ export function ApiKeyManager({ merchantId, initialKeys }: ApiKeyManagerProps) {
         </p>
         <pre className="mt-3 overflow-x-auto rounded-xl border border-white/10 bg-slate-950/70 p-3 text-xs text-slate-200">
           {curlExample}
+        </pre>
+        <p className="mt-4 text-sm text-slate-300">
+          Prefer a reusable JS wrapper to avoid repeating headers, retries, and timeout handling.
+        </p>
+        <pre className="mt-3 overflow-x-auto rounded-xl border border-white/10 bg-slate-950/70 p-3 text-xs text-slate-200">
+          {jsAgentExample}
         </pre>
       </div>
 

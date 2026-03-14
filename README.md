@@ -59,7 +59,8 @@ App default URL: `http://localhost:3000`
    - `Alerts` for incident stream and acknowledgment actions
    - `Integrations` for API keys and backend wiring
 4. Create an API key in `Integrations` and use it from your backend with `x-api-key` + `x-merchant-id`.
-5. Use `Sign out` in the sidebar to end the session.
+5. Optionally use the JS agent wrapper at `lib/integrations/trustguard-js-agent.ts` to avoid manual header/retry logic.
+6. Use `Sign out` in the sidebar to end the session.
 
 For returning users: `http://localhost:3000/login`.
 
@@ -101,6 +102,42 @@ corepack pnpm exec vercel --version
 - `DELETE /api/integrations/keys/:id`
 
 Detailed contracts: `doc/API.md`
+
+## JavaScript Agent Integration
+
+Use the built-in JS wrapper from your backend service:
+
+```ts
+import { TrustGuardJsAgent } from "@/lib/integrations/trustguard-js-agent";
+
+const trustguard = new TrustGuardJsAgent({
+  baseUrl: process.env.TRUSTGUARD_BASE_URL!,
+  apiKey: process.env.TRUSTGUARD_API_KEY!,
+  merchantId: process.env.TRUSTGUARD_MERCHANT_ID!,
+  timeoutMs: 5000,
+  retries: 2
+});
+
+const { analysis } = await trustguard.scorePayment({
+  device: {
+    user_id: "external-123",
+    browser: "Chrome",
+    os: "Windows"
+  },
+  transaction: {
+    amount: 249.99,
+    currency: "USD",
+    user_id: "external-123",
+    country_code: "US"
+  }
+});
+```
+
+The wrapper handles:
+
+- `x-api-key` + `x-merchant-id` headers
+- timeout and retry behavior
+- typed endpoint methods (`analyzeTransaction`, `registerDevice`, `scorePayment`, `getAlerts`)
 
 ## Database
 
