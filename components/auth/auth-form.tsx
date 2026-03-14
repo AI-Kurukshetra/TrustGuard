@@ -43,7 +43,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         return;
       }
 
-      router.replace("/");
+      router.replace(isSignup ? "/onboarding" : "/");
       router.refresh();
     } catch {
       setError("Network error. Please retry.");

@@ -57,3 +57,7 @@
   - Cases: status transitions (`open`, `in_review`, `escalated`, `resolved`)
   - Rules: create, enable/disable, and delete
   - Alerts: acknowledge
+- Added first-run onboarding route (`/onboarding`) with a practical setup checklist (workspace confirmation, API key creation, first transaction call, and navigation shortcuts).
+- Updated signup flow to redirect newly created users to onboarding instead of landing directly on the dashboard.
+- Added sidebar entry for onboarding so operators can revisit setup guidance later.
+- Added a full feature status audit in `doc/ROADMAP.md` covering all 20 core and 12 advanced features, with updated completion labels (`Complete (MVP)`, `Partial`, `Not Started`) and a new phased roadmap (`R1`-`R5`) for unfinished scope.

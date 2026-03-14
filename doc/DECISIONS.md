@@ -31,3 +31,6 @@
 - Keep local and Vercel pointed to one Supabase project for live shared data parity; treat browser session cookies as domain-specific while API-key traffic remains environment-agnostic.
 - For sign-out endpoints that redirect to page routes, use HTTP `303 See Other` instead of `307` to force a follow-up GET and avoid method replay errors on route pages (`/login` 405).
 - Surface existing backend operations through explicit dashboard action controls so analysts can execute case/rule/alert workflows without leaving the UI.
+- Route first-time signups to a dedicated onboarding page (`/onboarding`) so integration setup and first API call steps are explicit before users explore the broader dashboard.
+- Use a three-state feature maturity rubric (`Complete (MVP)`, `Partial`, `Not Started`) for roadmap governance so planning reflects actual implementation depth instead of binary done/not-done labels.
+- Prioritize remaining roadmap phases by dependency and business risk: finish must-have detection gaps first, then model/identity operations, then graph/multi-channel depth, and only then advanced differentiators.

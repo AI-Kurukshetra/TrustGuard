@@ -32,3 +32,5 @@
 [2026-03-14 14:09] codex — Added operator signup/login/logout endpoints, auth pages, dashboard auth guard, cookie-backed merchant context, and tenant-scoped dashboard data loading for authenticated sessions.
 [2026-03-14 14:23] codex — Added `integration_api_keys` migration + push, enabled API-key auth in `requireMerchantAuth`, implemented integration key CRUD endpoints and dashboard setup UI, and documented one-live-Supabase setup for local and Vercel.
 [2026-03-14 14:36] codex — Fixed logout redirect from 307 to 303 (prevents POST-to-/login 405 on Vercel), added alert acknowledge API/UI action, and wired interactive case/rule action controls in dashboard pages.
+[2026-03-14 15:02] codex — Added `/onboarding` first-run guide, redirected new signups there, added onboarding sidebar entry, and enriched merchant `cd973ed7-82a1-4f9e-bb88-9326f7fd2369` with full live demo entities (devices/sessions/payment methods/verification/webhooks/patterns).
+[2026-03-14 15:00] codex — Audited completion status for all 20 core + 12 advanced PRD features and updated `doc/ROADMAP.md` with a phase-based roadmap for remaining scope.

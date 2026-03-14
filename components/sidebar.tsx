@@ -11,6 +11,7 @@ interface SidebarLink {
 
 const links: SidebarLink[] = [
   { href: "/", label: "Command Center", meta: "Realtime overview" },
+  { href: "/onboarding", label: "Onboarding", meta: "First-run guide" },
   { href: "/transactions", label: "Transactions", meta: "Risk scoring queue" },
   { href: "/cases", label: "Cases", meta: "Analyst workflow" },
   { href: "/rules", label: "Rules", meta: "Policy controls" },

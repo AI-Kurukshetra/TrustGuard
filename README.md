@@ -49,8 +49,9 @@ App default URL: `http://localhost:3000`
 ## Product Usage Flow
 
 1. Open `http://localhost:3000/signup` and create your operator account + merchant workspace.
-2. You are signed in automatically and redirected to the dashboard (`/`).
+2. You are signed in automatically and redirected to onboarding (`/onboarding`).
 3. Use the sidebar to navigate:
+   - `Onboarding` for first-run setup checklist
    - `Command Center` for live KPIs and queue
    - `Transactions` for scored payment review
    - `Cases` for fraud investigations and case status actions
