@@ -45,9 +45,12 @@ interface AnalyzeTransactionInput {
   currency?: string;
   device_is_new?: boolean;
   velocity_count?: number;
+  velocity_24h_count?: number;
   geo_mismatch?: boolean;
   travel_speed_kmh?: number;
   login_gap_minutes?: number;
+  latitude?: number;
+  longitude?: number;
   user_in_whitelist?: boolean;
   device_trust_score?: number;
   merchant_id?: string;
@@ -248,6 +251,66 @@ function selectFinalDecision(
 
   const ruleDecision = actionToDecision(sorted[0].action);
   return decisionRank(ruleDecision) >= decisionRank(heuristicDecision) ? ruleDecision : heuristicDecision;
+}
+
+function toRadians(value: number) {
+  return (value * Math.PI) / 180;
+}
+
+function haversineKm(fromLat: number, fromLng: number, toLat: number, toLng: number) {
+  const earthRadiusKm = 6371;
+  const dLat = toRadians(toLat - fromLat);
+  const dLng = toRadians(toLng - fromLng);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(fromLat)) *
+      Math.cos(toRadians(toLat)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+
+  return 2 * earthRadiusKm * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function calculateHeuristicRisk(params: {
+  amount: number;
+  isNewDevice: boolean;
+  velocity1h: number;
+  geoMismatch: boolean;
+  travelSpeedKmh: number;
+  loginGapMinutes: number;
+}) {
+  let score = 10;
+  const explanation: string[] = [];
+
+  if (params.amount > 1500) {
+    score += 28;
+    explanation.push("high_amount");
+  }
+
+  if (params.isNewDevice) {
+    score += 22;
+    explanation.push("new_device");
+  }
+
+  if (params.velocity1h >= 5) {
+    score += 20;
+    explanation.push("velocity_spike");
+  }
+
+  if (params.geoMismatch) {
+    score += 30;
+    explanation.push("geolocation_mismatch");
+  }
+
+  if (params.travelSpeedKmh > 900 && params.loginGapMinutes > 0 && params.loginGapMinutes < 45) {
+    score += 20;
+    explanation.push("impossible_travel");
+  }
+
+  return {
+    normalizedScore: Math.min(100, score),
+    explanation
+  };
 }
 
 function normalizeCaseStatus(status: string): FraudCase["status"] {
@@ -692,44 +755,33 @@ export async function registerDevice(input: RegisterDeviceInput) {
 export async function analyzeTransaction(input: AnalyzeTransactionInput): Promise<AnalyzeTransactionResult> {
   const amount = Number(input.amount ?? 0);
   const isNewDevice = Boolean(input.device_is_new);
-  let velocityCount = Number(input.velocity_count ?? 0);
-  const geoMismatch = Boolean(input.geo_mismatch);
-  const travelSpeedKmh = Number(input.travel_speed_kmh ?? 0);
-  const loginGapMinutes = Number(input.login_gap_minutes ?? 0);
+  let velocityCount1h = Number(input.velocity_count ?? 0);
+  let velocityCount24h = Number(input.velocity_24h_count ?? input.velocity_count ?? 0);
+  let geoMismatch = Boolean(input.geo_mismatch);
+  let travelSpeedKmh = Number(input.travel_speed_kmh ?? 0);
+  let loginGapMinutes = Number(input.login_gap_minutes ?? 0);
   const userInWhitelist = Boolean(input.user_in_whitelist);
   const deviceTrustScore = Number(input.device_trust_score ?? 0);
+  const currentLatitude = input.latitude !== undefined ? Number(input.latitude) : null;
+  const currentLongitude = input.longitude !== undefined ? Number(input.longitude) : null;
 
-  let riskScore = 10;
-
-  if (amount > 1500) {
-    riskScore += 28;
-  }
-
-  if (isNewDevice) {
-    riskScore += 22;
-  }
-
-  if (velocityCount >= 5) {
-    riskScore += 20;
-  }
-
-  if (geoMismatch) {
-    riskScore += 30;
-  }
-
-  const normalizedScore = Math.min(100, riskScore);
+  const baseRisk = calculateHeuristicRisk({
+    amount,
+    isNewDevice,
+    velocity1h: velocityCount1h,
+    geoMismatch,
+    travelSpeedKmh,
+    loginGapMinutes
+  });
+  const normalizedScore = baseRisk.normalizedScore;
   const heuristicDecision = normalizedScore >= 85 ? "block" : normalizedScore >= 60 ? "review" : "approve";
-  const baseExplanation = [
-    amount > 1500 ? "high_amount" : null,
-    isNewDevice ? "new_device" : null,
-    velocityCount >= 5 ? "velocity_spike" : null,
-    geoMismatch ? "geolocation_mismatch" : null
-  ].filter(Boolean) as string[];
+  const baseExplanation = [...baseRisk.explanation];
 
   const buildRuleContext = () => ({
     transaction_amount: amount,
     device_is_new: isNewDevice,
-    velocity_count: velocityCount,
+    velocity_count: velocityCount1h,
+    velocity_24h_count: velocityCount24h,
     geo_mismatch: geoMismatch,
     travel_speed_kmh: travelSpeedKmh,
     login_gap_minutes: loginGapMinutes,
@@ -767,17 +819,92 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
   try {
     const client = createSupabaseAdminClient();
 
-    if (!input.velocity_count && input.user_id) {
+    if (input.user_id) {
       const oneHourAgoIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      const { count } = await client
+      const twentyFourHoursAgoIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const [{ count: oneHourCount }, { count: dayCount }] = await Promise.all([
+        client
+          .from("transactions")
+          .select("id", { count: "exact", head: true })
+          .eq("merchant_id", input.merchant_id)
+          .eq("user_id", input.user_id)
+          .gte("occurred_at", oneHourAgoIso),
+        client
+          .from("transactions")
+          .select("id", { count: "exact", head: true })
+          .eq("merchant_id", input.merchant_id)
+          .eq("user_id", input.user_id)
+          .gte("occurred_at", twentyFourHoursAgoIso)
+      ]);
+
+      velocityCount1h = Math.max(velocityCount1h, oneHourCount ?? 0);
+      velocityCount24h = Math.max(velocityCount24h, dayCount ?? 0);
+
+      const { data: latestTransaction } = await client
         .from("transactions")
-        .select("id", { count: "exact", head: true })
+        .select("country_code")
         .eq("merchant_id", input.merchant_id)
         .eq("user_id", input.user_id)
-        .gte("occurred_at", oneHourAgoIso);
+        .order("occurred_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      velocityCount = count ?? velocityCount;
+      if (!geoMismatch && input.country_code && latestTransaction?.country_code) {
+        geoMismatch = latestTransaction.country_code !== input.country_code;
+      }
+
+      if (currentLatitude !== null && currentLongitude !== null) {
+        const { data: latestSession } = await client
+          .from("sessions")
+          .select("latitude, longitude, started_at")
+          .eq("merchant_id", input.merchant_id)
+          .eq("user_id", input.user_id)
+          .not("latitude", "is", null)
+          .not("longitude", "is", null)
+          .order("started_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (
+          latestSession?.latitude !== null &&
+          latestSession?.latitude !== undefined &&
+          latestSession?.longitude !== null &&
+          latestSession?.longitude !== undefined
+        ) {
+          const sessionGapMinutes = Math.floor(
+            (Date.now() - new Date(latestSession.started_at).getTime()) / (1000 * 60)
+          );
+          const safeGapHours = Math.max(sessionGapMinutes / 60, 0.01);
+          const distanceKm = haversineKm(
+            Number(latestSession.latitude),
+            Number(latestSession.longitude),
+            currentLatitude,
+            currentLongitude
+          );
+          const computedTravelSpeed = Number((distanceKm / safeGapHours).toFixed(2));
+
+          travelSpeedKmh = Math.max(travelSpeedKmh, computedTravelSpeed);
+          loginGapMinutes = Math.max(loginGapMinutes, sessionGapMinutes);
+
+          if (travelSpeedKmh > 900 && loginGapMinutes < 45) {
+            geoMismatch = true;
+          }
+        }
+      }
     }
+
+    const derivedRisk = calculateHeuristicRisk({
+      amount,
+      isNewDevice,
+      velocity1h: velocityCount1h,
+      geoMismatch,
+      travelSpeedKmh,
+      loginGapMinutes
+    });
+    const normalizedDerivedScore = derivedRisk.normalizedScore;
+    const derivedHeuristicDecision =
+      normalizedDerivedScore >= 85 ? "block" : normalizedDerivedScore >= 60 ? "review" : "approve";
+    const derivedBaseExplanation = [...derivedRisk.explanation];
 
     const activeRules = await fetchActiveRuleRecords(client, input.merchant_id);
     const context = buildRuleContext();
@@ -785,8 +912,8 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
       evaluateRuleCondition(rule.condition_expression, context)
     );
     const matchedRuleNames = matchedRules.map((rule) => rule.rule_name);
-    const finalDecision = selectFinalDecision(heuristicDecision, matchedRules);
-    const explanation = [...baseExplanation, ...matchedRuleNames].filter(Boolean);
+    const finalDecision = selectFinalDecision(derivedHeuristicDecision, matchedRules);
+    const explanation = [...derivedBaseExplanation, ...matchedRuleNames].filter(Boolean);
     const transactionStatus =
       finalDecision === "block" ? "blocked" : finalDecision === "review" ? "review" : "approved";
 
@@ -802,7 +929,7 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
         amount,
         currency: input.currency ?? "USD",
         status: transactionStatus,
-        risk_score: normalizedScore,
+        risk_score: normalizedDerivedScore,
         recommended_action: finalDecision === "approve" ? "allow" : finalDecision,
         channel: input.channel ?? "web",
         payment_provider: input.payment_provider ?? null,
@@ -811,8 +938,8 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
         country_code: input.country_code ?? null,
         region: input.region ?? null,
         city: input.city ?? null,
-        velocity_1h: velocityCount,
-        velocity_24h: velocityCount,
+        velocity_1h: velocityCount1h,
+        velocity_24h: velocityCount24h,
         is_new_device: isNewDevice,
         geo_mismatch: geoMismatch,
         decision_reason: explanation.join(", "),
@@ -831,13 +958,14 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
       entity_type: "transaction",
       entity_id: transactionRow.id,
       transaction_id: transactionRow.id,
-      score: normalizedScore,
+      score: normalizedDerivedScore,
       recommended_action: finalDecision === "approve" ? "allow" : finalDecision,
       reasons: explanation,
       feature_snapshot: {
         amount,
         device_is_new: isNewDevice,
-        velocity_count: velocityCount,
+        velocity_count: velocityCount1h,
+        velocity_24h_count: velocityCount24h,
         geo_mismatch: geoMismatch,
         travel_speed_kmh: travelSpeedKmh,
         login_gap_minutes: loginGapMinutes,
@@ -866,7 +994,7 @@ export async function analyzeTransaction(input: AnalyzeTransactionInput): Promis
 
     return {
       transaction_id: transactionRow.id,
-      risk_score: normalizedScore,
+      risk_score: normalizedDerivedScore,
       decision: finalDecision,
       explanation,
       matched_rules: matchedRuleNames,

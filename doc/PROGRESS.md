@@ -10,3 +10,4 @@
 [2026-03-14 10:40] codex — Added Supabase client scaffolding, switched pages/routes to a shared data layer with mock fallback, and created a second migration with deterministic demo seed data.
 [2026-03-14 11:03] codex — Added `doc/ROADMAP.md` with sprint-by-sprint feature delivery plan, acceptance criteria, and commit discipline linked to the 20 core features.
 [2026-03-14 11:08] codex — Implemented runtime risk rule evaluation in transaction scoring and persisted execution audit rows to `rule_executions`.
+[2026-03-14 11:12] codex — Added derived velocity windows (1h/24h) and impossible-travel geolocation enrichment to transaction scoring before persistence.
