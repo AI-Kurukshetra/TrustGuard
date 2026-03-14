@@ -23,3 +23,11 @@
 - [!] 2026-03-14 10:35 Resolve environment-specific Next.js production build failure (`EXDEV` on `.next` rename during static page output)
 - [~] Connect the UI and APIs to Supabase-backed persistence and auth (API auth now request-scoped via Supabase JWT; UI auth wiring pending)
 - [~] Add test coverage and CI checks for core fraud flows (unit test scaffolding added; sandbox runner issue on `vitest`)
+- [x] 2026-03-14 12:02 Add one-command pre-commit testing checklist (`npm run test:checklist`) with optional API smoke gate
+- [x] 2026-03-14 12:04 Fix Vitest alias resolution for `@/*` imports by adding explicit `vitest.config.ts`
+- [x] 2026-03-14 12:26 Install Vercel CLI via `pnpm` and verify local CLI execution
+- [x] 2026-03-14 12:34 Add root `README.md` with project setup, commands, API overview, and docs references
+- [x] 2026-03-14 12:40 Run full local API verification matrix with authenticated Supabase user and capture failing endpoint groups
+- [x] 2026-03-14 13:26 Push pending Supabase migrations to remote project and verify previously failing endpoint groups recover
+- [x] 2026-03-14 13:26 Fix `/api/graph/materialize` duplicate upsert conflict by de-duplicating connection rows before batch upsert
+- [x] 2026-03-14 13:28 Make smoke API script idempotent across repeated runs and verify full `npm run test:checklist` passes with Supabase auth

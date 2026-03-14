@@ -23,3 +23,11 @@
 - Hardened API authentication with bearer token + tenant membership role checks, introduced request-scoped Supabase clients, and removed service-role client fallback from request API paths.
 - Added missing API groups: `/api/auth/me`, `/api/rules`, `/api/webhooks`, and `/api/compliance/reports` with role-based tenant guards.
 - Added first-class schema entities and API routes for `fraud_patterns`, `geographical_locations`, and `behavioral_patterns`.
+- Added a one-command pre-commit checklist via `scripts/test-checklist.sh` and `npm run test:checklist` to run lint, typecheck, unit tests, and optional smoke API checks.
+- Added `vitest.config.ts` with explicit `@` alias resolution so tests can import project modules using the same path convention as app code.
+- Ran a full authenticated local API verification matrix and documented that several newer endpoint groups fail because related Supabase migrations are not yet applied on the connected project.
+- Pushed pending Supabase migrations to the linked remote project, restoring table availability for analytics, graph, entity lists, and pattern/location endpoints.
+- Fixed `/api/graph/materialize` to deduplicate relation keys before upsert, preventing Postgres `ON CONFLICT DO UPDATE` multi-hit errors.
+- Updated `scripts/smoke-test.sh` to generate per-run unique values for insert-heavy endpoints so repeated local smoke runs remain idempotent.
+- Added `vercel` CLI as a project dev dependency using `pnpm` and generated a `pnpm-lock.yaml` for reproducible package resolution.
+- Added a root `README.md` with local setup, required environment variables, pnpm/vercel commands, API route summary, migration references, and links to `/doc` operating files.

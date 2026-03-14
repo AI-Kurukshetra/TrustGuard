@@ -9,3 +9,10 @@
 - Use a multi-tenant schema keyed by `merchant_id` so TrustGuard can support SaaS isolation cleanly from the first Supabase-backed version.
 - Map internal dashboard operators through `merchant_members` linked to `auth.users` so Supabase RLS can enforce tenant access and role-based permissions without mixing analysts with monitored end-user accounts.
 - Until dashboard auth is implemented, allow server-only Supabase reads to fall back to the service-role client so the UI can be wired to real data without exposing elevated credentials to the browser.
+- Add a single pre-commit checklist command (`npm run test:checklist`) that always runs lint/typecheck/unit tests and only runs API smoke tests when required credentials are present or `RUN_SMOKE=always`.
+- Use an explicit Vitest config alias (`@` -> project root) to keep test import behavior aligned with Next.js `tsconfig` path aliases.
+- Treat Supabase table-missing (`PGRST205`) errors as migration-state blockers and require applying pending SQL migrations before continuing API QA.
+- In graph materialization, aggregate duplicate relationship keys within the request and upsert one row per conflict key to avoid Postgres multi-update conflicts.
+- Keep smoke test requests idempotent by injecting per-run unique suffixes for routes with unique-key constraints.
+- Install the Vercel CLI as a local dev dependency (`pnpm exec vercel`) so deployment commands are version-pinned per repository rather than relying on a global install.
+- Keep onboarding instructions in a root `README.md` that points to `/doc` files for deeper specifications, so setup and operational context stay easy to discover for new contributors.

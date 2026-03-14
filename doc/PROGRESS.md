@@ -19,3 +19,10 @@
 [2026-03-14 12:18] codex — Hardened API auth with bearer-token tenant membership checks, switched routes to request-scoped Supabase clients, and removed service-role fallback from request handling paths.
 [2026-03-14 12:34] codex — Added missing route groups for `/auth`, `/rules`, `/webhooks`, and `/compliance` with tenant-aware role enforcement and updated API docs.
 [2026-03-14 12:49] codex — Added schema + APIs for first-class `fraud_patterns`, `geographical_locations`, and `behavioral_patterns` entities with tenant RLS policies.
+[2026-03-14 12:02] codex — Added `scripts/test-checklist.sh`, wired `npm run test:checklist`, and made smoke API checks optional via env flags.
+[2026-03-14 12:04] codex — Added `vitest.config.ts` alias mapping for `@` to fix test import resolution of `@/lib/trustguard-data`.
+[2026-03-14 12:26] codex — Installed `vercel` as a dev dependency with `pnpm` and verified CLI availability via `pnpm exec vercel --version`.
+[2026-03-14 12:34] codex — Added root `README.md` documenting setup, environment variables, scripts, API surface, migrations, and project docs.
+[2026-03-14 12:40] codex — Executed end-to-end local/API test matrix with real Supabase auth, confirmed core routes work, and isolated missing-table failures to unapplied later migrations in the target Supabase project.
+[2026-03-14 13:26] codex — Linked Supabase project, pushed pending migrations, fixed graph materialization upsert conflicts, and re-ran targeted endpoint checks to 0 failures.
+[2026-03-14 13:28] codex — Updated smoke script for idempotent inserts and validated full checklist (lint, typecheck, unit tests, smoke API) passes against local server with Supabase-backed auth.
