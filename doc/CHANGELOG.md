@@ -10,3 +10,4 @@
 - Replaced the basic schema stub with a detailed TrustGuard Supabase/Postgres schema design in `doc/SCHEMA.md`.
 - Added the first Supabase migration implementing the TrustGuard schema, tenant membership model, triggers, indexes, and RLS policies.
 - Added Supabase environment/client scaffolding, rewired the dashboard and API routes to a shared repository with fallback behavior, and created a demo seed migration.
+- Added `doc/ROADMAP.md` defining three sprint phases, feature mapping for all 20 core capabilities, and commit conventions for ongoing implementation.
