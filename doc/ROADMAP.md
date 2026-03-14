@@ -149,11 +149,11 @@ Legend:
 | 10 | Real-time Alerts and Notifications | In Progress | Sprint 1 |
 | 11 | Machine Learning Model Management | In Progress | Sprint 2 |
 | 12 | Identity Verification | In Progress | Sprint 2 |
-| 13 | Graph Analysis | Planned | Sprint 3 |
+| 13 | Graph Analysis | In Progress | Sprint 3 |
 | 14 | Whitelist/Blacklist Management | In Progress | Sprint 2 |
 | 15 | API Integration Framework | In Progress | Sprint 1 |
 | 16 | Compliance Reporting | In Progress | Sprint 3 |
-| 17 | Multi-channel Fraud Detection | Planned | Sprint 3 |
+| 17 | Multi-channel Fraud Detection | In Progress | Sprint 3 |
 | 18 | Historical Transaction Analysis | In Progress | Sprint 3 |
 | 19 | Customer Risk Profiling | In Progress | Sprint 2 |
 | 20 | Chargeback Prevention | In Progress | Sprint 2 |

@@ -157,3 +157,35 @@ Headers:
 - `x-merchant-id: <merchant_uuid>`
 
 Stores behavioral biometrics payloads on a session record.
+
+### POST `/api/analytics/refresh`
+
+Headers:
+
+- `x-merchant-id: <merchant_uuid>`
+
+Builds or refreshes one `daily_risk_metrics` row from transactions and chargebacks for a target day.
+
+### GET `/api/analytics/summary`
+
+Headers:
+
+- `x-merchant-id: <merchant_uuid>`
+
+Returns historical metrics from `daily_risk_metrics` for trend dashboards.
+
+### POST `/api/reports/generate`
+
+Headers:
+
+- `x-merchant-id: <merchant_uuid>`
+
+Generates and stores a compliance report payload in `compliance_reports`.
+
+### POST `/api/graph/materialize`
+
+Headers:
+
+- `x-merchant-id: <merchant_uuid>`
+
+Materializes `user -> device` and `user -> payment_method` connections into `entity_connections`.

@@ -17,3 +17,4 @@
 - Added `doc/API.md` with current endpoint contracts and required tenant context conventions.
 - Added whitelist/blacklist management (`entity_lists`) with schema migration, API CRUD, and scoring-time list match adjustments.
 - Added basic model registry, identity verification ingest/query, and session behavioral biometrics APIs as Sprint 2 foundations.
+- Added Sprint 3 analytics/graph/compliance foundations: schema for daily metrics + entity connections, analytics refresh/summary APIs, compliance report generation API, and graph materialization API.
