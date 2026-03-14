@@ -17,7 +17,7 @@ export default async function CasesPage() {
     <PageShell
       pathname="/cases"
       title="Fraud case management"
-      subtitle="Analysts can review flagged transactions, see investigation history, and move decisions from triage to escalation with clear reasoning."
+      subtitle="Use the case queue to move work from open to review, escalate high-risk cases, and close only after evidence checks."
     >
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <SectionCard title="Case queue" eyebrow="Investigations">
@@ -29,15 +29,15 @@ export default async function CasesPage() {
             {[
               {
                 title: "1. Intake",
-                body: "Receive alert, attach transaction context, and lock analyst ownership."
+                body: "Start with open cases, claim ownership, and confirm alert + transaction context."
               },
               {
                 title: "2. Investigate",
-                body: "Compare device history, travel pattern, login anomalies, and payment retries."
+                body: "Check device history, location changes, failed logins, and payment evidence."
               },
               {
                 title: "3. Decide",
-                body: "Approve, reject, or escalate while preserving explainable notes for audit."
+                body: "Escalate high risk, resolve low risk, and keep notes clear for audit."
               }
             ].map((step) => (
               <div key={step.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">

@@ -65,3 +65,4 @@
 - Integrate dynamic thresholding directly into merchant config (`merchants.risk_threshold_review/block`) so transaction scoring consumes adaptive thresholds without introducing a second independent threshold source.
 - Treat contextual authentication as part of the scoring pipeline by auto-creating challenges on high-risk/step-up signals and exposing challenge lifecycle endpoints for analyst/automation resolution.
 - Use hash-based privacy-preserving cross-merchant signals plus hash-chain verification logs to deliver shared intelligence and immutable verification without exposing raw tenant data.
+- Prioritize guided-first workflows in analyst consoles (rules/alerts/cases): expose safe defaults, templates, and plain-language next steps before advanced controls to reduce early misconfiguration and speed first-time operator adoption.

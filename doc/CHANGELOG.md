@@ -106,3 +106,4 @@
 - Extended `analyzeTransaction` to support dynamic merchant thresholds, channel/adversarial/multimodal risk signals, and scoring-triggered contextual-auth challenge creation with persisted challenge ids.
 - Expanded API reference coverage in `lib/api-reference.ts` for all newly added route method/path pairs and added unit tests in `tests/advanced-intelligence.test.ts` for new advanced helper logic.
 - Updated `doc/ROADMAP.md` to mark all 20 core and 12 advanced features as complete (MVP) and replaced remaining-scope plan with post-completion hardening roadmap phases.
+- Simplified analyst operations UX for new users: added guided rule templates and examples in `components/rules/rules-manager.tsx`, alert stream summaries/filters and action guidance in `components/alerts/alert-manager.tsx`, and clearer case queue controls/recommendations in `components/cases/case-manager.tsx`; updated page copy in dashboard Rules/Alerts/Cases pages.

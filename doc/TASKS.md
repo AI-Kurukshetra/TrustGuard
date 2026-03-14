@@ -60,3 +60,4 @@
 - [x] 2026-03-14 15:48 Complete advanced differentiator APIs: federated learning, synthetic fraud generation, explainability, cross-merchant intelligence, adversarial detection, dynamic thresholds, multimodal scoring, simulation, quantum-ready key rotation, blockchain verification, and AutoML runs
 - [x] 2026-03-14 15:48 Integrate contextual-auth challenge lifecycle (`/api/contextual-auth/challenges`) and scoring-triggered step-up challenge creation
 - [x] 2026-03-14 15:48 Update roadmap tracking board to reflect complete core + advanced feature coverage and post-completion hardening queue
+- [x] 2026-03-14 15:59 Simplify Rules, Alerts, and Cases UX for new users with guided rule templates, queue filters, and clearer next-step guidance

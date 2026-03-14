@@ -50,3 +50,4 @@
 [2026-03-14 15:44] codex — Added smooth drawer open/close animation and touch swipe-to-close for mobile sidebar, with shared sidebar navigation reused for drawer and desktop.
 [2026-03-14 15:47] codex — Fixed strict TS issues in `lib/advanced-intelligence.ts` (literal-union impact typing + tuple-typed modality scores), returning `pnpm typecheck` to green.
 [2026-03-14 15:48] codex — Completed remaining core + advanced scope: added advanced-intelligence migration, graph/channel/historical/contextual-auth APIs, full advanced feature API suite, dynamic-threshold + contextual-auth scoring integration, and updated roadmap/status tracking docs.
+[2026-03-14 15:59] codex — Improved onboarding UX in Rules/Alerts/Cases by adding guided rule creation, alert and case queue summaries/filters, and plain-language next-step guidance for new analysts.
