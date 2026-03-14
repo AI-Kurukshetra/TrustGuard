@@ -385,6 +385,29 @@ Patch request body:
 }
 ```
 
+### GET/POST `/api/company/members`
+
+Role: `admin` with operator session auth (not API key).
+
+Supports:
+
+- `GET` list company members for the active merchant workspace
+- `POST` invite a member by email and assign role to the same merchant workspace
+
+Invite request body:
+
+```json
+{
+  "email": "teammate@company.com",
+  "role": "analyst"
+}
+```
+
+Behavior:
+
+- sends Supabase invite email when possible
+- upserts `merchant_members` for the same `merchant_id` as the inviter
+
 ### POST `/api/auth/signup`
 
 Request body:

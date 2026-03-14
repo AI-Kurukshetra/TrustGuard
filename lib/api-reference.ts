@@ -362,6 +362,22 @@ export const API_METHOD_REFERENCES: ApiMethodReference[] = [
   {
     groupId: "policy",
     method: "GET",
+    path: "/api/company/members",
+    role: "admin",
+    auth: "operator_session",
+    summary: "List company members for the active merchant workspace."
+  },
+  {
+    groupId: "policy",
+    method: "POST",
+    path: "/api/company/members",
+    role: "admin",
+    auth: "operator_session",
+    summary: "Invite or assign a member to the active merchant workspace."
+  },
+  {
+    groupId: "policy",
+    method: "GET",
     path: "/api/models",
     role: "viewer",
     auth: "operator_or_api_key",

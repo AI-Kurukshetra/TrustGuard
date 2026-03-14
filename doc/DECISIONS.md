@@ -73,3 +73,4 @@
 - Deduplicate overage/near-limit notifications with a dedicated `billing_usage_notifications` table keyed by `(merchant_id, period_key, event_type, threshold_percent)` so threshold alerts fire once per period without notification spam.
 - Keep billing UX separate from the KPI-heavy scorecard by introducing a dedicated `/billing` page focused on subscription state, upgrade actions, and invoice placeholders.
 - Group account-level actions (`Profile`, `Billing`, `Scorecard`, `Sign out`) at the bottom of the sidebar to match user mental model and keep high-frequency operations links in the main nav area.
+- Scope member invites to the active `merchant_id` at the API layer and assign membership during invite flow so invited operators always land in the same company workspace.

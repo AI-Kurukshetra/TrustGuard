@@ -125,3 +125,5 @@
 - Moved `Billing` and `Scorecard` out of the top workspace nav into a bottom `Account` action group with sign-out in `components/sidebar.tsx`.
 - Added operator profile management: `app/(dashboard)/profile/page.tsx`, `components/profile/profile-editor.tsx`, and `GET/PATCH /api/profile`.
 - Updated API/reference docs (`lib/api-reference.ts`, `doc/API.md`, `README.md`) to include profile endpoint and profile navigation entry.
+- Added `GET/POST /api/company/members` for admin-only company member listing and invite-to-same-merchant membership assignment.
+- Extended profile page with `components/profile/member-invite-manager.tsx` to invite members by email+role and view current merchant members.

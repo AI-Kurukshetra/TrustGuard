@@ -56,3 +56,4 @@
 [2026-03-14 16:45] codex — Added automated quota-threshold notifications (85%/100%) via `billing_usage_notifications`, wired alert creation into transaction scoring, exposed notification records in `/api/billing/usage`, and surfaced quota notices on `/scorecard`.
 [2026-03-14 16:52] codex — Added dedicated `/billing` workspace page and sidebar link with plan details, entitlement visibility, upgrade CTA, and invoice-history placeholder for upcoming provider integration.
 [2026-03-14 16:56] codex — Reorganized sidebar account actions by moving Billing/Scorecard near logout, added Profile navigation, and implemented `/profile` + `GET/PATCH /api/profile` for operator metadata editing.
+[2026-03-14 17:01] codex — Added admin-only company member invite flow (`GET/POST /api/company/members`) that assigns invited users to the same merchant and wired team-invite/member-list controls into the profile page.
