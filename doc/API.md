@@ -648,6 +648,7 @@ Supports:
 
 - read monthly usage events
 - return daily usage rollups for billing reconciliation
+- return quota-threshold notification records for the selected period
 
 Query params:
 

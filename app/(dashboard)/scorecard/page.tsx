@@ -25,6 +25,9 @@ export default async function ScorecardPage() {
   const openAlerts = dashboard.alerts.filter((item) => !item.acknowledgedAt).length;
   const openCases = dashboard.fraudCases.filter((item) => item.status !== "resolved").length;
   const reviewTransactions = dashboard.transactions.filter((item) => item.status === "review").length;
+  const quotaAlerts = dashboard.alerts
+    .filter((item) => item.alertType.startsWith("billing_"))
+    .slice(0, 3);
 
   const transactionUsagePct = pct(
     billing.usage.transactionScored,
@@ -110,6 +113,24 @@ export default async function ScorecardPage() {
             <div className="mt-2 text-2xl font-semibold capitalize text-white">{kpis.modelDriftSignal}</div>
           </div>
         </div>
+      </SectionCard>
+
+      <SectionCard title="Quota notifications" eyebrow="Billing alerts">
+        {quotaAlerts.length === 0 ? (
+          <p className="text-sm text-slate-300">No quota warnings this month.</p>
+        ) : (
+          <div className="space-y-3">
+            {quotaAlerts.map((alert) => (
+              <div key={alert.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex items-center justify-between text-xs uppercase tracking-[0.14em] text-slate-400">
+                  <span>{alert.severity}</span>
+                  <span>{new Date(alert.createdAt).toLocaleString()}</span>
+                </div>
+                <div className="mt-2 text-sm text-white">{alert.summary}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </SectionCard>
     </PageShell>
   );

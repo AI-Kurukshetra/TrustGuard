@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireMerchantAuth } from "@/lib/api-auth";
 import { recordApiRequestMetric } from "@/lib/api-metrics";
-import { checkUsageAllowance, recordUsageEvent } from "@/lib/billing";
+import { checkUsageAllowance, createUsageThresholdNotification, recordUsageEvent } from "@/lib/billing";
 import { analyzeTransaction } from "@/lib/trustguard-data";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +45,13 @@ export async function POST(request: NextRequest) {
   });
 
   if (!usage.allowed) {
+    await createUsageThresholdNotification({
+      client: auth.context.supabase ?? null,
+      merchantId: auth.context.merchantId,
+      eventType: "transaction_scored",
+      allowance: usage
+    });
+
     await track(402, "transaction_quota_exceeded");
     return NextResponse.json(
       {
@@ -62,6 +69,13 @@ export async function POST(request: NextRequest) {
   }
   if (!apiUsage.allowed) {
     await track(402, "api_quota_exceeded");
+    await createUsageThresholdNotification({
+      client: auth.context.supabase ?? null,
+      merchantId: auth.context.merchantId,
+      eventType: "api_call",
+      allowance: apiUsage
+    });
+
     return NextResponse.json(
       {
         error: "Monthly API call quota exceeded for current plan.",
@@ -99,7 +113,21 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    await createUsageThresholdNotification({
+      client: auth.context.supabase ?? null,
+      merchantId: auth.context.merchantId,
+      eventType: "transaction_scored",
+      allowance: usage
+    });
+
     await track(200);
+    await createUsageThresholdNotification({
+      client: auth.context.supabase ?? null,
+      merchantId: auth.context.merchantId,
+      eventType: "api_call",
+      allowance: apiUsage
+    });
+
     return NextResponse.json(result);
   } catch {
     await track(500, "analyze_transaction_failed");

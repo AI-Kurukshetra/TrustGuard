@@ -55,10 +55,17 @@
   - plan-tier entitlements and feature gates (`starter`, `growth`, `enterprise`)
   - usage metering events (`transaction_scored`, `api_call`, `alert_generated`)
   - monthly quota checks on transaction scoring
+  - automated quota-threshold notifications (85% and 100%) with deduplicated billing alerts
   - entitlement and usage APIs (`/api/billing/entitlements`, `/api/billing/usage`)
   - customer-facing scorecard API + dashboard page (`/api/reports/scorecard`, `/scorecard`)
 
 - Remaining:
   - external billing provider integration
   - invoicing/reconciliation workflows
-  - automated overage billing and notifications
+  - automated overage billing charges
+
+## Monetization Roadmap Tracker
+
+- Phase 1 (`Complete`): usage metering + quotas + plan entitlements + scorecard.
+- Phase 2 (`In Progress`): threshold notifications complete; next is automated overage charging logic.
+- Phase 3 (`Planned`): billing-provider sync, invoice generation, and reconciliation exports.

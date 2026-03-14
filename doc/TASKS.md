@@ -65,3 +65,4 @@
 - [x] 2026-03-14 16:40 Add monetization foundations: usage metering schema, plan entitlements, transaction/API quota enforcement, and billing usage APIs
 - [x] 2026-03-14 16:40 Add customer scorecard surfaces (`/api/reports/scorecard` and `/scorecard`) and navigation entry for plan/KPI visibility
 - [x] 2026-03-14 16:40 Gate advanced endpoints by plan entitlement (advanced suite, federated learning, cross-merchant intelligence, quantum crypto)
+- [x] 2026-03-14 16:45 Add automated quota-threshold notifications (85%/100%) with deduped billing alerts and usage API exposure

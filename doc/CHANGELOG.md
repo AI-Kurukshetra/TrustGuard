@@ -117,3 +117,7 @@
 - Added dashboard scorecard page at `app/(dashboard)/scorecard/page.tsx` and sidebar navigation link for plan usage + KPI visibility.
 - Added unit tests `tests/billing.test.ts` for billing plan definitions and helper behavior.
 - Updated API/schema/pricing docs (`doc/API.md`, `doc/SCHEMA.md`, `doc/PRICING.md`, `README.md`) for billing/entitlement and scorecard additions.
+- Added migration `20260314184000_add_billing_usage_notifications.sql` with tenant-scoped RLS policies and unique period/event/threshold dedupe keys.
+- Added `createUsageThresholdNotification` in `lib/billing.ts` to emit one alert per period threshold (85% warning, 100% exceeded) for metered quota events.
+- Wired automated quota notification creation into `POST /api/transactions/analyze` for both transaction and API metering checks.
+- Extended `GET /api/billing/usage` responses with period quota notification records and surfaced recent billing quota alerts in `/scorecard`.

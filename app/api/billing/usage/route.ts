@@ -38,18 +38,30 @@ export async function GET(request: NextRequest) {
       period: bounds.periodKey,
       totals: snapshot.usage,
       daily: [],
-      recent_events: []
+      recent_events: [],
+      quota_notifications: []
     });
   }
 
-  const { data, error } = await auth.context.supabase
-    .from("merchant_usage_events")
-    .select("id, event_type, quantity, event_at, metadata")
-    .eq("merchant_id", auth.context.merchantId)
-    .gte("event_at", bounds.startIso)
-    .lt("event_at", bounds.endIso)
-    .order("event_at", { ascending: false })
-    .limit(5000);
+  const [eventsResponse, notificationsResponse] = await Promise.all([
+    auth.context.supabase
+      .from("merchant_usage_events")
+      .select("id, event_type, quantity, event_at, metadata")
+      .eq("merchant_id", auth.context.merchantId)
+      .gte("event_at", bounds.startIso)
+      .lt("event_at", bounds.endIso)
+      .order("event_at", { ascending: false })
+      .limit(5000),
+    auth.context.supabase
+      .from("billing_usage_notifications")
+      .select("id, event_type, threshold_percent, triggered_usage, usage_limit, metadata, created_at, alert_id")
+      .eq("merchant_id", auth.context.merchantId)
+      .eq("period_key", bounds.periodKey)
+      .order("threshold_percent", { ascending: true })
+      .order("created_at", { ascending: false })
+  ]);
+
+  const { data, error } = eventsResponse;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
@@ -89,6 +101,7 @@ export async function GET(request: NextRequest) {
     period: bounds.periodKey,
     totals: snapshot.usage,
     daily,
-    recent_events: (data ?? []).slice(0, 100)
+    recent_events: (data ?? []).slice(0, 100),
+    quota_notifications: notificationsResponse.data ?? []
   });
 }

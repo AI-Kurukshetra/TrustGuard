@@ -11,6 +11,7 @@ export type PlanFeatureKey =
   | "white_label";
 
 export type UsageEventType = "transaction_scored" | "api_call" | "alert_generated";
+export type MeteredUsageEventType = Exclude<UsageEventType, "alert_generated">;
 
 type BillingClient = ReturnType<typeof createSupabaseRequestClient> | ReturnType<typeof createSupabaseAdminClient>;
 
@@ -259,6 +260,8 @@ export async function checkUsageAllowance(input: {
   };
 }
 
+export type UsageAllowanceResult = Awaited<ReturnType<typeof checkUsageAllowance>>;
+
 export async function recordUsageEvent(input: {
   client: BillingClient | null;
   merchantId: string;
@@ -283,6 +286,102 @@ export async function recordUsageEvent(input: {
   } catch {
     // Usage writes are best-effort and should not fail caller flow.
   }
+}
+
+export async function createUsageThresholdNotification(input: {
+  client: BillingClient | null;
+  merchantId: string;
+  eventType: MeteredUsageEventType;
+  allowance: UsageAllowanceResult;
+}) {
+  if (!hasSupabaseEnv() || !input.client) {
+    return { created: false as const };
+  }
+
+  const limit = input.allowance.limit;
+  if (limit === null || limit <= 0) {
+    return { created: false as const };
+  }
+
+  const usedForThreshold = Math.max(0, input.allowance.nextUsage);
+  const usagePercent = (usedForThreshold / limit) * 100;
+  const threshold = usagePercent >= 100 ? 100 : usagePercent >= 85 ? 85 : null;
+  if (threshold === null) {
+    return { created: false as const };
+  }
+
+  const severity = threshold >= 100 ? "high" : "medium";
+  const channelLabel = input.eventType === "transaction_scored" ? "transaction" : "API call";
+  const title =
+    threshold >= 100
+      ? `Monthly ${channelLabel} quota exceeded`
+      : `Monthly ${channelLabel} quota at ${threshold}%`;
+  const summary =
+    threshold >= 100
+      ? `${channelLabel} usage is ${usedForThreshold}/${limit} for ${input.allowance.periodKey}.`
+      : `${channelLabel} usage reached ${usedForThreshold}/${limit} for ${input.allowance.periodKey}.`;
+
+  const { data: notificationRows, error: notificationError } = await input.client
+    .from("billing_usage_notifications")
+    .upsert(
+      {
+        merchant_id: input.merchantId,
+        period_key: input.allowance.periodKey,
+        event_type: input.eventType,
+        threshold_percent: threshold,
+        triggered_usage: usedForThreshold,
+        usage_limit: limit,
+        metadata: {
+          plan_tier: input.allowance.planTier,
+          usage_percent: Number(usagePercent.toFixed(2))
+        }
+      },
+      {
+        onConflict: "merchant_id,period_key,event_type,threshold_percent",
+        ignoreDuplicates: true
+      }
+    )
+    .select("id")
+    .limit(1);
+
+  if (notificationError || !notificationRows || notificationRows.length === 0) {
+    return { created: false as const };
+  }
+
+  const notificationId = notificationRows[0]?.id;
+  if (!notificationId) {
+    return { created: false as const };
+  }
+
+  const { data: alertRows, error: alertError } = await input.client
+    .from("alerts")
+    .insert({
+      merchant_id: input.merchantId,
+      entity_type: "merchant",
+      entity_id: input.merchantId,
+      alert_type: `billing_${input.eventType}_quota`,
+      severity,
+      title,
+      summary,
+      delivery_channels: ["dashboard"]
+    })
+    .select("id")
+    .limit(1);
+
+  if (alertError) {
+    return { created: false as const };
+  }
+
+  const alertId = alertRows?.[0]?.id as string | undefined;
+  if (alertId) {
+    await input.client.from("billing_usage_notifications").update({ alert_id: alertId }).eq("id", notificationId);
+  }
+
+  return {
+    created: true as const,
+    threshold,
+    usagePercent: Number(usagePercent.toFixed(2))
+  };
 }
 
 export async function checkFeatureAccess(input: {

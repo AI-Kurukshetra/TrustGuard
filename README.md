@@ -181,6 +181,7 @@ Supabase migrations are in:
 - `supabase/migrations/20260314160500_add_compliance_schedules.sql`
 - `supabase/migrations/20260314172000_add_advanced_intelligence_features.sql`
 - `supabase/migrations/20260314173000_add_billing_usage_and_entitlements.sql`
+- `supabase/migrations/20260314184000_add_billing_usage_notifications.sql`
 
 Canonical schema reference: `doc/SCHEMA.md`
 

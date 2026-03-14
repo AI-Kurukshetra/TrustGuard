@@ -810,6 +810,24 @@ Per-merchant override controls for plan limits and feature-flag entitlements.
 | `created_at` | `timestamptz` | default `now()` |
 | `updated_at` | `timestamptz` | default `now()` |
 
+### billing_usage_notifications
+
+Deduplicated usage-threshold notification records to avoid duplicate overage warnings.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | primary key |
+| `merchant_id` | `uuid` | fk -> `merchants.id` |
+| `period_key` | `text` | monthly bucket (`YYYY-MM`) |
+| `event_type` | `text` | metered event type (`transaction_scored`, `api_call`) |
+| `threshold_percent` | `integer` | threshold marker (`85`, `100`) |
+| `triggered_usage` | `integer` | observed usage when notification fired |
+| `usage_limit` | `integer` | configured limit at trigger time |
+| `metadata` | `jsonb` | plan tier and usage percentage snapshot |
+| `alert_id` | `uuid` | fk -> `alerts.id`, nullable |
+| `created_at` | `timestamptz` | default `now()` |
+| `updated_at` | `timestamptz` | default `now()` |
+
 ### graph_risk_findings
 
 Persisted graph-analysis findings for suspicious connected clusters.
@@ -917,6 +935,7 @@ The advanced feature rollout is persisted in these tables:
 - `merchants` 1 -> many `compliance_report_schedules`
 - `merchants` 1 -> many `merchant_usage_events`
 - `merchants` 1 -> 0..1 `merchant_quota_overrides`
+- `merchants` 1 -> many `billing_usage_notifications`
 - `merchants` 1 -> many `graph_risk_findings`
 - `merchants` 1 -> many `channel_risk_baselines`
 - `merchants` 1 -> many `historical_risk_snapshots`
@@ -948,6 +967,7 @@ The advanced feature rollout is persisted in these tables:
 - check `challenger_traffic_percent between 0 and 100`
 - check `frequency in (daily, weekly, monthly)` for `compliance_report_schedules`
 - check `quantity > 0` for `merchant_usage_events`
+- check `threshold_percent in (85, 100)` and `usage_limit > 0` for `billing_usage_notifications`
 - check `risk_score between 0 and 100` for `graph_risk_findings`, `adversarial_detections`, `multimodal_assessments`, and `explainability_reports`
 - check status values for `contextual_auth_challenges`, `federated_learning_rounds`, `fraud_simulation_runs`, and `automl_runs`
 

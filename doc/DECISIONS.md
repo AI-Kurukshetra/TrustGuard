@@ -70,3 +70,4 @@
 - Enforce commercialization controls in the API layer (quota checks + feature gates) instead of UI-only restrictions, so billing and entitlement rules apply consistently to both dashboard and server-to-server integrations.
 - Use a hybrid entitlement model: static plan defaults in code for predictable behavior, plus per-merchant DB overrides for sales/enterprise flexibility without redeploying.
 - Meter usage through explicit `merchant_usage_events` writes (transaction, API, alert) to keep billing/audit reconstruction simple and extensible for future provider reconciliation.
+- Deduplicate overage/near-limit notifications with a dedicated `billing_usage_notifications` table keyed by `(merchant_id, period_key, event_type, threshold_percent)` so threshold alerts fire once per period without notification spam.
