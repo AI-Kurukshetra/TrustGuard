@@ -69,3 +69,4 @@
 - [x] 2026-03-14 16:52 Add dedicated `/billing` page with plan details, upgrade CTA, and invoice-history placeholder
 - [x] 2026-03-14 16:56 Move billing/scorecard to bottom account actions with logout and add editable profile flow (`/profile`, `/api/profile`)
 - [x] 2026-03-14 17:01 Add company member invite flow scoped to same merchant (`GET/POST /api/company/members`) and profile UI management
+- [x] 2026-03-14 17:03 Show active company name under sidebar logo for desktop and mobile navigation

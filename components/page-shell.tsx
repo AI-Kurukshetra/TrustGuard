@@ -2,8 +2,9 @@ import { ReactNode } from "react";
 import { BrandLogo } from "@/components/brand-logo";
 import { MobileSidebarDrawer } from "@/components/mobile-sidebar-drawer";
 import { Sidebar } from "@/components/sidebar";
+import { getRequestAuthContext } from "@/lib/auth/request-context";
 
-export function PageShell({
+export async function PageShell({
   pathname,
   title,
   subtitle,
@@ -14,6 +15,17 @@ export function PageShell({
   subtitle: string;
   children: ReactNode;
 }) {
+  const authContext = getRequestAuthContext();
+  let companyName: string | null = null;
+  if (authContext.client && authContext.merchantId) {
+    const { data: merchant } = await authContext.client
+      .from("merchants")
+      .select("name")
+      .eq("id", authContext.merchantId)
+      .maybeSingle();
+    companyName = merchant?.name ?? null;
+  }
+
   const sidebarHeader = (
     <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Coverage</div>
@@ -25,10 +37,10 @@ export function PageShell({
   return (
     <div className="dashboard-grid min-h-screen lg:grid lg:grid-cols-[280px_1fr]">
       <div className="hidden lg:block">
-        <Sidebar pathname={pathname} header={sidebarHeader} />
+        <Sidebar pathname={pathname} header={sidebarHeader} companyName={companyName} />
       </div>
       <main className="px-5 py-6 md:px-8 md:py-8">
-        <MobileSidebarDrawer pathname={pathname} />
+        <MobileSidebarDrawer pathname={pathname} companyName={companyName} />
         <header className="mb-8 flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-gradient-to-r from-pulse/15 via-white/[0.04] to-alarm/10 p-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <BrandLogo variant="compact" className="rounded-xl border border-pulse/25 bg-pulse/10 px-3 py-2" />

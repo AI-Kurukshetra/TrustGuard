@@ -127,3 +127,4 @@
 - Updated API/reference docs (`lib/api-reference.ts`, `doc/API.md`, `README.md`) to include profile endpoint and profile navigation entry.
 - Added `GET/POST /api/company/members` for admin-only company member listing and invite-to-same-merchant membership assignment.
 - Extended profile page with `components/profile/member-invite-manager.tsx` to invite members by email+role and view current merchant members.
+- Updated sidebar shell to display active company name beneath the logo by loading merchant name in `components/page-shell.tsx` and passing it to desktop/mobile sidebar navigation.

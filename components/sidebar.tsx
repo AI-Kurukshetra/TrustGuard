@@ -50,13 +50,22 @@ const accountLinks: SidebarLink[] = [
   { href: "/scorecard", label: "Scorecard", meta: "Plan & KPI view", icon: "SC" }
 ];
 
-export function Sidebar({ pathname, header }: { pathname: string; header?: ReactNode }) {
-  return <SidebarNavigation pathname={pathname} header={header} />;
+export function Sidebar({
+  pathname,
+  header,
+  companyName
+}: {
+  pathname: string;
+  header?: ReactNode;
+  companyName?: string | null;
+}) {
+  return <SidebarNavigation pathname={pathname} header={header} companyName={companyName} />;
 }
 
 type SidebarNavigationProps = {
   pathname: string;
   header?: ReactNode;
+  companyName?: string | null;
   className?: string;
   stickyDesktop?: boolean;
   onNavigate?: () => void;
@@ -65,6 +74,7 @@ type SidebarNavigationProps = {
 export function SidebarNavigation({
   pathname,
   header,
+  companyName,
   className,
   stickyDesktop = true,
   onNavigate
@@ -84,6 +94,12 @@ export function SidebarNavigation({
             className="rounded-2xl border border-pulse/30 bg-pulse/10 px-3 py-2"
             markClassName="h-8 w-8 rounded-lg"
           />
+          {companyName ? (
+            <div className="mt-3 rounded-xl border border-white/10 bg-black/25 px-3 py-2">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Company</div>
+              <div className="mt-1 text-sm font-medium text-slate-200">{companyName}</div>
+            </div>
+          ) : null}
           <h1 className="mt-4 text-2xl font-semibold text-white">Fraud Control Plane</h1>
           <p className="mt-2 max-w-xs text-sm text-slate-400">
             AI-guided detection, analyst review, and low-latency protection for digital payments.

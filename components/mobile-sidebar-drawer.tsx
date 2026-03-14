@@ -7,9 +7,10 @@ import { SidebarNavigation } from "@/components/sidebar";
 
 type MobileSidebarDrawerProps = {
   pathname: string;
+  companyName?: string | null;
 };
 
-export function MobileSidebarDrawer({ pathname }: MobileSidebarDrawerProps) {
+export function MobileSidebarDrawer({ pathname, companyName }: MobileSidebarDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -118,6 +119,7 @@ export function MobileSidebarDrawer({ pathname }: MobileSidebarDrawerProps) {
           >
             <SidebarNavigation
               pathname={pathname}
+              companyName={companyName}
               stickyDesktop={false}
               onNavigate={() => setIsOpen(false)}
               className="h-full border-r border-white/10 border-b-0 bg-slate-950/95"

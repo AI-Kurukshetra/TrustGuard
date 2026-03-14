@@ -74,3 +74,4 @@
 - Keep billing UX separate from the KPI-heavy scorecard by introducing a dedicated `/billing` page focused on subscription state, upgrade actions, and invoice placeholders.
 - Group account-level actions (`Profile`, `Billing`, `Scorecard`, `Sign out`) at the bottom of the sidebar to match user mental model and keep high-frequency operations links in the main nav area.
 - Scope member invites to the active `merchant_id` at the API layer and assign membership during invite flow so invited operators always land in the same company workspace.
+- Surface the active company name directly in sidebar chrome to reduce merchant-context ambiguity for operators managing multiple workspaces.
