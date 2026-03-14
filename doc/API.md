@@ -246,3 +246,31 @@ Supports:
 
 - list compliance reports for a tenant
 - create compliance report artifact (`admin`)
+
+### GET/POST `/api/geographical-locations`
+
+Supports:
+
+- list merchant-scoped location risk records
+- create location risk records (`analyst`)
+
+### GET/POST `/api/behavioral-patterns`
+
+Supports:
+
+- list behavioral pattern observations
+- create pattern observations (`analyst`)
+
+### GET/POST `/api/fraud-patterns`
+
+Supports:
+
+- list fraud pattern records
+- create fraud pattern records (`analyst`)
+
+### PATCH/DELETE `/api/fraud-patterns/{id}`
+
+Supports:
+
+- update pattern metadata/status (`analyst`)
+- delete pattern (`admin`)

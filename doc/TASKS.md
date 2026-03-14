@@ -16,6 +16,7 @@
 - [x] 2026-03-14 11:46 Sprint 2: add payment method validation API and user risk profile refresh aggregation endpoint
 - [x] 2026-03-14 12:18 Cross-sprint security: enforce bearer-token merchant membership auth and remove service-role usage from request API path
 - [x] 2026-03-14 12:34 Add missing API groups: `/auth`, `/rules`, `/webhooks`, and `/compliance`
+- [x] 2026-03-14 12:49 Add first-class entities and APIs for `fraud_patterns`, `geographical_locations`, and `behavioral_patterns`
 - [x] 2026-03-14 10:35 Scaffold Next.js + Tailwind TrustGuard MVP foundation
 - [x] 2026-03-14 10:35 Build primary dashboard views for monitoring, transactions, cases, rules, and alerts
 - [x] 2026-03-14 10:35 Add mock REST API endpoints for transaction scoring, device registration, alerts, and user risk profiles

@@ -788,6 +788,9 @@ Add after MVP stabilization:
 - `compliance_reports`
 - `webhook_endpoints`
 - `webhook_deliveries`
+- `geographical_locations`
+- `behavioral_patterns`
+- `fraud_patterns`
 
 ## Notes for Supabase Implementation
 

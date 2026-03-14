@@ -22,3 +22,4 @@
 - Added Vitest test scaffolding and unit tests for rule-condition and heuristic-scoring logic.
 - Hardened API authentication with bearer token + tenant membership role checks, introduced request-scoped Supabase clients, and removed service-role client fallback from request API paths.
 - Added missing API groups: `/api/auth/me`, `/api/rules`, `/api/webhooks`, and `/api/compliance/reports` with role-based tenant guards.
+- Added first-class schema entities and API routes for `fraud_patterns`, `geographical_locations`, and `behavioral_patterns`.
