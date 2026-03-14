@@ -104,6 +104,25 @@ export const API_METHOD_REFERENCES: ApiMethodReference[] = [
     ]
   },
   {
+    groupId: "operations",
+    method: "PATCH",
+    path: "/api/transactions/:id",
+    role: "analyst",
+    auth: "operator_or_api_key",
+    summary: "Manually update one transaction decision status from dashboard triage actions.",
+    requestExample: {
+      status: "review",
+      note: "Manual analyst override after evidence review."
+    },
+    responseExample: {
+      data: {
+        id: "70000000-0000-0000-0000-000000000002",
+        status: "review"
+      }
+    },
+    notes: ["Allowed statuses: approved, review, blocked."]
+  },
+  {
     groupId: "integration",
     method: "POST",
     path: "/api/devices/register",

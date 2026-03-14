@@ -143,6 +143,7 @@ interface ActiveRuleRecord {
 
 type SupportedDecision = AnalyzeTransactionResult["decision"];
 type CaseStatus = "open" | "in_review" | "escalated" | "resolved";
+type TransactionActionStatus = "approved" | "review" | "blocked";
 
 function getReadClient(): SupabaseClientLike {
   return createSupabaseServerClient();
@@ -161,6 +162,13 @@ function normalizeTransactionStatus(status: string): Transaction["status"] {
     return "review";
   }
   return "approved";
+}
+
+function resolveTransactionRecommendedAction(status: TransactionActionStatus) {
+  if (status === "approved") {
+    return "allow";
+  }
+  return status;
 }
 
 function normalizeRuleAction(action: string): RiskRule["action"] {
@@ -1379,6 +1387,61 @@ export async function updateFraudCaseStatus(input: {
     return {
       updated: true as const,
       fraud_case: fraudCase
+    };
+  } catch {
+    return { updated: false as const };
+  }
+}
+
+export async function updateTransactionStatus(input: {
+  merchant_id: string;
+  transaction_id: string;
+  status: TransactionActionStatus;
+  actor_id?: string | null;
+  note?: string | null;
+}, client?: SupabaseClientLike) {
+  if (!hasSupabaseEnv()) {
+    return { updated: false as const };
+  }
+
+  try {
+    const db = client ?? createSupabaseServerClient();
+    const recommendedAction = resolveTransactionRecommendedAction(input.status);
+    const { data: transaction, error } = await db
+      .from("transactions")
+      .update({
+        status: input.status,
+        recommended_action: recommendedAction,
+        decision_reason: input.note ?? null
+      })
+      .eq("id", input.transaction_id)
+      .eq("merchant_id", input.merchant_id)
+      .select("id, status")
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    const { data: latestRiskScore } = await db
+      .from("risk_scores")
+      .select("id")
+      .eq("merchant_id", input.merchant_id)
+      .eq("transaction_id", input.transaction_id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latestRiskScore?.id) {
+      await db
+        .from("risk_scores")
+        .update({ recommended_action: recommendedAction })
+        .eq("id", latestRiskScore.id);
+    }
+
+    return {
+      updated: true as const,
+      transaction
     };
   } catch {
     return { updated: false as const };

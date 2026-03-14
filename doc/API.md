@@ -117,6 +117,27 @@ Behavior:
 - auto-creates `alerts` and `fraud_cases` for `review` and `block`
 - dispatches configured webhook/email/slack-style endpoints and records `webhook_deliveries` with retry attempts
 
+### PATCH `/api/transactions/{id}`
+
+Headers:
+
+- `x-merchant-id: <merchant_uuid>`
+
+Request body:
+
+```json
+{
+  "status": "review",
+  "note": "Manual analyst override after evidence review."
+}
+```
+
+Behavior:
+
+- supports manual transaction triage from dashboard actions
+- allowed statuses: `approved`, `review`, `blocked`
+- updates transaction `status` and aligned `recommended_action`
+
 ### POST `/api/devices/register`
 
 Request body:

@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { Alert } from "@/lib/types";
-import { formatTimestamp } from "@/lib/utils";
+import { cn, formatTimestamp } from "@/lib/utils";
 
 type AlertManagerProps = {
   initialAlerts: Alert[];
@@ -27,7 +28,9 @@ export function AlertManager({ initialAlerts }: AlertManagerProps) {
   const [alerts, setAlerts] = useState(initialAlerts);
   const [filter, setFilter] = useState<AlertFilter>("open");
   const [severity, setSeverity] = useState<"all" | Alert["severity"]>("all");
+  const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [mutatingId, setMutatingId] = useState<string | null>(null);
 
   const summary = useMemo(() => {
@@ -45,6 +48,7 @@ export function AlertManager({ initialAlerts }: AlertManagerProps) {
   }, [alerts]);
 
   const visibleAlerts = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
     const filtered = alerts.filter((item) => {
       if (filter === "open" && item.acknowledgedAt) {
         return false;
@@ -54,6 +58,12 @@ export function AlertManager({ initialAlerts }: AlertManagerProps) {
       }
       if (severity !== "all" && item.severity !== severity) {
         return false;
+      }
+      if (normalizedQuery) {
+        const haystack = [item.id, item.alertType, item.summary, item.entityId].join(" ").toLowerCase();
+        if (!haystack.includes(normalizedQuery)) {
+          return false;
+        }
       }
       return true;
     });
@@ -66,10 +76,16 @@ export function AlertManager({ initialAlerts }: AlertManagerProps) {
       }
       return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
     });
-  }, [alerts, filter, severity]);
+  }, [alerts, filter, query, severity]);
+
+  const visibleOpenAlertIds = useMemo(
+    () => visibleAlerts.filter((alert) => !alert.acknowledgedAt).map((alert) => alert.id),
+    [visibleAlerts]
+  );
 
   async function acknowledge(alertId: string) {
     setError(null);
+    setInfo(null);
     setMutatingId(alertId);
 
     try {
@@ -87,11 +103,52 @@ export function AlertManager({ initialAlerts }: AlertManagerProps) {
       setAlerts((current) =>
         current.map((item) => (item.id === alertId ? { ...item, acknowledgedAt } : item))
       );
+      setInfo(`Alert ${alertId.slice(0, 8)} marked reviewed.`);
     } catch {
       setError("Network error while acknowledging alert.");
     } finally {
       setMutatingId(null);
     }
+  }
+
+  async function acknowledgeVisibleOpenAlerts() {
+    if (visibleOpenAlertIds.length === 0) {
+      return;
+    }
+
+    setError(null);
+    setInfo(null);
+    setMutatingId("bulk");
+
+    let successCount = 0;
+    for (const alertId of visibleOpenAlertIds) {
+      try {
+        const response = await fetch(`/api/alerts/${alertId}`, { method: "PATCH" });
+        const body = (await response.json().catch(() => null)) as
+          | { error?: string; data?: { acknowledged_at?: string } }
+          | null;
+
+        if (!response.ok || !body?.data) {
+          continue;
+        }
+
+        const acknowledgedAt = body.data.acknowledged_at ?? new Date().toISOString();
+        setAlerts((current) =>
+          current.map((item) => (item.id === alertId ? { ...item, acknowledgedAt } : item))
+        );
+        successCount += 1;
+      } catch {
+        // Keep processing remaining alerts to avoid partial-update dead ends.
+      }
+    }
+
+    if (successCount === 0) {
+      setError("No alerts were acknowledged. Please retry.");
+    } else {
+      setInfo(`Marked ${successCount} alert${successCount === 1 ? "" : "s"} as reviewed.`);
+    }
+
+    setMutatingId(null);
   }
 
   return (
@@ -130,9 +187,10 @@ export function AlertManager({ initialAlerts }: AlertManagerProps) {
             key={key}
             type="button"
             onClick={() => setFilter(key)}
-            className={`rounded-md px-2.5 py-1.5 ${
+            className={cn(
+              "rounded-md px-2.5 py-1.5",
               filter === key ? "bg-pulse text-slate-950" : "border border-white/15 text-slate-300"
-            }`}
+            )}
           >
             {label}
           </button>
@@ -150,9 +208,26 @@ export function AlertManager({ initialAlerts }: AlertManagerProps) {
           <option value="medium">Medium</option>
           <option value="low">Low</option>
         </select>
+
+        <button
+          type="button"
+          onClick={acknowledgeVisibleOpenAlerts}
+          disabled={visibleOpenAlertIds.length === 0 || mutatingId === "bulk"}
+          className="rounded-md border border-white/15 bg-black/25 px-2.5 py-1.5 text-slate-200 transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {mutatingId === "bulk" ? "Saving..." : `Mark visible open as reviewed (${visibleOpenAlertIds.length})`}
+        </button>
       </div>
 
+      <input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Search by alert ID, type, entity, or summary..."
+        className="w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none transition focus:border-pulse/60"
+      />
+
       {error ? <p className="rounded-xl border border-alarm/30 bg-alarm/10 px-3 py-2 text-sm text-alarm">{error}</p> : null}
+      {info ? <p className="rounded-xl border border-emerald-300/30 bg-emerald-300/10 px-3 py-2 text-sm text-emerald-200">{info}</p> : null}
 
       {visibleAlerts.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-slate-300">
@@ -181,7 +256,7 @@ export function AlertManager({ initialAlerts }: AlertManagerProps) {
               </div>
               <p className="mt-2 text-sm text-slate-300">{alert.summary}</p>
               <p className="mt-2 text-xs text-cyan-200">Next step: {nextStepForAlert(alert)}</p>
-              <div className="mt-3">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 {alert.acknowledgedAt ? (
                   <span className="text-xs text-emerald-300">
                     Acknowledged at {formatTimestamp(alert.acknowledgedAt)}
@@ -196,6 +271,14 @@ export function AlertManager({ initialAlerts }: AlertManagerProps) {
                     {mutatingId === alert.id ? "Saving..." : "Mark reviewed"}
                   </button>
                 )}
+                {alert.severity === "critical" || alert.severity === "high" ? (
+                  <Link
+                    href="/cases"
+                    className="rounded-lg border border-white/15 bg-black/25 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-slate-200 transition hover:border-white/30"
+                  >
+                    Open cases queue
+                  </Link>
+                ) : null}
               </div>
             </div>
             <div className="text-xs text-slate-400">{formatTimestamp(alert.createdAt)}</div>

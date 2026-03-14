@@ -14,7 +14,7 @@ export default async function AlertsPage() {
     <PageShell
       pathname="/alerts"
       title="Alert center"
-      subtitle="Review open alerts first, follow the recommended next step, then mark reviewed so your queue stays clean."
+      subtitle="Triage open alerts with search and bulk review actions, then jump straight to case work for critical incidents."
     >
       <SectionCard title="Realtime alert stream" eyebrow="Notifications">
         <AlertManager initialAlerts={alerts} />

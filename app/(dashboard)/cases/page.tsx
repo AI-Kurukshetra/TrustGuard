@@ -17,7 +17,7 @@ export default async function CasesPage() {
     <PageShell
       pathname="/cases"
       title="Fraud case management"
-      subtitle="Use the case queue to move work from open to review, escalate high-risk cases, and close only after evidence checks."
+      subtitle="Use guided status controls and risk-based recommendations to move cases from open to resolution with fewer clicks."
     >
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <SectionCard title="Case queue" eyebrow="Investigations">

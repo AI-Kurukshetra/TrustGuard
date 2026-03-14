@@ -56,6 +56,7 @@
 - [x] 2026-03-14 15:41 Add mobile collapsible sidebar drawer with menu toggle, overlay close, and escape-key support
 - [x] 2026-03-14 15:44 Add mobile sidebar slide animation and touch swipe-to-close interaction
 - [x] 2026-03-14 15:47 Fix `lib/advanced-intelligence.ts` strict TypeScript typing errors to restore full `pnpm typecheck` pass
+- [x] 2026-03-14 17:30 Improve transaction/case/alert page actions with guided status workflows, search, and bulk alert review controls
 - [x] 2026-03-14 15:48 Phase R3: add graph risk-scoring APIs, channel ingestion/baselines, and historical analysis snapshots with anomaly/model-feedback outputs
 - [x] 2026-03-14 15:48 Complete advanced differentiator APIs: federated learning, synthetic fraud generation, explainability, cross-merchant intelligence, adversarial detection, dynamic thresholds, multimodal scoring, simulation, quantum-ready key rotation, blockchain verification, and AutoML runs
 - [x] 2026-03-14 15:48 Integrate contextual-auth challenge lifecycle (`/api/contextual-auth/challenges`) and scoring-triggered step-up challenge creation

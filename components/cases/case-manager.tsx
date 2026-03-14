@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { FraudCase, Transaction } from "@/lib/types";
-import { formatTimestamp } from "@/lib/utils";
+import { cn, formatTimestamp } from "@/lib/utils";
 import { RiskBadge } from "@/components/risk-badge";
 
 type CaseManagerProps = {
@@ -11,17 +11,13 @@ type CaseManagerProps = {
 };
 
 type CaseStatus = "open" | "in_review" | "escalated" | "resolved";
+type CaseFilter = "all" | CaseStatus;
 
-type CaseStatusAction = {
-  status: CaseStatus;
-  label: string;
-};
-
-const statusActions: CaseStatusAction[] = [
-  { status: "open", label: "Reset to open" },
-  { status: "in_review", label: "Start review" },
-  { status: "escalated", label: "Escalate" },
-  { status: "resolved", label: "Resolve" }
+const caseStatusOptions: Array<{ status: CaseStatus; label: string }> = [
+  { status: "open", label: "Open" },
+  { status: "in_review", label: "In review" },
+  { status: "escalated", label: "Escalated" },
+  { status: "resolved", label: "Resolved" }
 ];
 
 function recommendationForCase(riskScore: number, status: CaseStatus) {
@@ -37,11 +33,24 @@ function recommendationForCase(riskScore: number, status: CaseStatus) {
   return "Low risk signal. Resolve if supporting checks are clean.";
 }
 
+function recommendedStatusForCase(riskScore: number): CaseStatus {
+  if (riskScore >= 85) {
+    return "escalated";
+  }
+  if (riskScore >= 60) {
+    return "in_review";
+  }
+  return "resolved";
+}
+
 export function CaseManager({ initialCases, transactions }: CaseManagerProps) {
   const [cases, setCases] = useState(initialCases);
   const [isMutatingCaseId, setIsMutatingCaseId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | CaseStatus>("open");
+  const [filter, setFilter] = useState<CaseFilter>("open");
+  const [query, setQuery] = useState("");
+  const [draftStatuses, setDraftStatuses] = useState<Record<string, CaseStatus>>({});
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   const txMap = useMemo(() => new Map(transactions.map((item) => [item.id, item])), [transactions]);
 
@@ -56,19 +65,43 @@ export function CaseManager({ initialCases, transactions }: CaseManagerProps) {
   }, [cases]);
 
   const visibleCases = useMemo(() => {
-    const filtered = cases.filter((item) => (filter === "all" ? true : item.status === filter));
-    return filtered.sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
-  }, [cases, filter]);
+    const normalizedQuery = query.trim().toLowerCase();
+    const filtered = cases.filter((item) => {
+      if (filter !== "all" && item.status !== filter) {
+        return false;
+      }
 
-  async function updateStatus(caseId: string, status: CaseStatus) {
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const transaction = txMap.get(item.transactionId);
+      const haystack = [
+        item.id,
+        item.transactionId,
+        item.owner,
+        item.analystNotes,
+        transaction?.reason ?? ""
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(normalizedQuery);
+    });
+
+    return filtered.sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+  }, [cases, filter, query, txMap]);
+
+  async function updateStatus(caseId: string, status: CaseStatus, note?: string) {
     setIsMutatingCaseId(caseId);
     setError(null);
+    setInfo(null);
 
     try {
       const response = await fetch(`/api/cases/${caseId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status, note: note ?? null })
       });
 
       const body = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -78,6 +111,8 @@ export function CaseManager({ initialCases, transactions }: CaseManagerProps) {
       }
 
       setCases((current) => current.map((item) => (item.id === caseId ? { ...item, status } : item)));
+      setDraftStatuses((current) => ({ ...current, [caseId]: status }));
+      setInfo(`Case ${caseId.slice(0, 8)} moved to ${status}.`);
     } catch {
       setError("Network error while updating case.");
     } finally {
@@ -123,16 +158,25 @@ export function CaseManager({ initialCases, transactions }: CaseManagerProps) {
             key={key}
             type="button"
             onClick={() => setFilter(key)}
-            className={`rounded-md px-2.5 py-1.5 ${
+            className={cn(
+              "rounded-md px-2.5 py-1.5",
               filter === key ? "bg-pulse text-slate-950" : "border border-white/15 text-slate-300"
-            }`}
+            )}
           >
             {label}
           </button>
         ))}
       </div>
 
+      <input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Search by case ID, transaction ID, owner, note, or reason..."
+        className="w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none transition focus:border-pulse/60"
+      />
+
       {error ? <p className="rounded-xl border border-alarm/30 bg-alarm/10 px-3 py-2 text-sm text-alarm">{error}</p> : null}
+      {info ? <p className="rounded-xl border border-emerald-300/30 bg-emerald-300/10 px-3 py-2 text-sm text-emerald-200">{info}</p> : null}
 
       {visibleCases.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-slate-300">
@@ -145,6 +189,9 @@ export function CaseManager({ initialCases, transactions }: CaseManagerProps) {
         if (!transaction) {
           return null;
         }
+
+        const recommendedStatus = recommendedStatusForCase(transaction.riskScore);
+        const draftStatus = draftStatuses[fraudCase.id] ?? fraudCase.status;
 
         return (
           <div key={fraudCase.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -169,18 +216,56 @@ export function CaseManager({ initialCases, transactions }: CaseManagerProps) {
             <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-slate-300">{fraudCase.analystNotes}</div>
             <div className="mt-2 text-xs text-slate-400">Owner: {fraudCase.owner}</div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              {statusActions.map((entry) => (
-                <button
-                  key={entry.status}
-                  type="button"
-                  onClick={() => updateStatus(fraudCase.id, entry.status)}
-                  disabled={isMutatingCaseId === fraudCase.id || fraudCase.status === entry.status}
-                  className="rounded-lg border border-white/15 bg-black/25 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-slate-200 transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {entry.label}
-                </button>
-              ))}
+            <div className="mt-4 grid gap-2 md:grid-cols-[1fr_auto_auto]">
+              <select
+                value={draftStatus}
+                onChange={(event) =>
+                  setDraftStatuses((current) => ({
+                    ...current,
+                    [fraudCase.id]: event.target.value as CaseStatus
+                  }))
+                }
+                disabled={isMutatingCaseId === fraudCase.id}
+                className="rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none transition focus:border-pulse/60 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {caseStatusOptions.map((entry) => (
+                  <option key={entry.status} value={entry.status}>
+                    {entry.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() =>
+                  updateStatus(
+                    fraudCase.id,
+                    draftStatus,
+                    `Case status updated to ${draftStatus} from dashboard case queue.`
+                  )
+                }
+                disabled={isMutatingCaseId === fraudCase.id || draftStatus === fraudCase.status}
+                className="rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-slate-200 transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isMutatingCaseId === fraudCase.id ? "Saving..." : "Save status"}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  updateStatus(
+                    fraudCase.id,
+                    recommendedStatus,
+                    `Recommended status ${recommendedStatus} applied from risk score ${transaction.riskScore}.`
+                  )
+                }
+                disabled={isMutatingCaseId === fraudCase.id || recommendedStatus === fraudCase.status}
+                className="rounded-lg border border-pulse/45 bg-pulse/20 px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-pulse transition hover:border-pulse/60 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Apply recommended ({recommendedStatus})
+              </button>
+            </div>
+
+            <div className="mt-2 text-xs text-slate-400">
+              Recommended path uses current risk score and keeps high-risk cases escalated first.
             </div>
           </div>
         );

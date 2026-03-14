@@ -60,6 +60,8 @@
 - Implement mobile navigation as a dedicated drawer component with explicit open/close state, overlay dismissal, and escape-key support, rather than forcing the desktop sidebar layout onto small screens.
 - For mobile drawer ergonomics, use both explicit controls and gesture support: slide animation for spatial continuity and left-swipe threshold close for one-handed navigation.
 - In strict TypeScript utilities, explicitly annotate literal unions and tuple arrays where inference widens (`string | number`) to avoid fragile downstream typing and ensure stable `tsc --noEmit`.
+- For analyst UX, expose explicit manual transaction triage (`approved`/`review`/`blocked`) via a dedicated API endpoint so transactions can be corrected without re-scoring calls.
+- Replace multi-button clutter in case/alert workflows with guided controls (recommended action + status selector + bulk operations) to reduce decision friction for high-volume queues.
 - Implement remaining core and advanced capabilities as first-class API workflows backed by explicit Supabase tables, so every feature is observable, queryable, and tenant-isolated rather than hidden in ad-hoc in-memory logic.
 - Centralize advanced signal logic in `lib/advanced-intelligence.ts` to keep scoring-adjacent algorithms deterministic and reusable across route handlers (graph, adversarial, multimodal, simulation, AutoML, explainability).
 - Integrate dynamic thresholding directly into merchant config (`merchants.risk_threshold_review/block`) so transaction scoring consumes adaptive thresholds without introducing a second independent threshold source.
